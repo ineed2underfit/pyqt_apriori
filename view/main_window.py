@@ -37,37 +37,37 @@ class MainWindow(FluentWindow):
 
         # 注释掉背景相关代码
         # 在 __init__ 最后加
-        # self.backgroundMask = QLabel(self)
-        # self.backgroundMask.resize(self.size())
-        # self.backgroundMask.setStyleSheet("background-color: rgba(255, 255, 255, 70);")  # 半透明白
-        # self.backgroundMask.lower()  # 保证在最底层，不遮住内容
-        # self.resizeEvent = self._resizeEvent  # 确保窗口变化时遮罩也跟着变
-        #
-        #
-        #
-        # # 背景图路径（建议使用相对路径）
-        # self.background_image = QPixmap(r"E:\PycharmProjects\pyqt_fluent_widgets\my_pyqt_fluent_testability\resource\images\China_army.jpg")
+        self.backgroundMask = QLabel(self)
+        self.backgroundMask.resize(self.size())
+        self.backgroundMask.setStyleSheet("background-color: rgba(255, 255, 255, 70);")  # 半透明白
+        self.backgroundMask.lower()  # 保证在最底层，不遮住内容
+        self.resizeEvent = self._resizeEvent  # 确保窗口变化时遮罩也跟着变
+
+
+
+        # 背景图路径（建议使用相对路径）
+        self.background_image = QPixmap(r"E:\PycharmProjects\pyqt_fluent_widgets\my_pyqt_fluent_testability\resource\images\China_army.jpg")
 
     # 注释掉背景相关方法
-    # def _resizeEvent(self, event):
-    #         self.backgroundMask.resize(self.size())
-    #         super().resizeEvent(event)
-    #
-    #
-    # def paintEvent(self, event):
-    #     painter = QPainter(self)
-    #     painter.setRenderHint(QPainter.Antialiasing)
-    #
-    #     # 绘制背景图（缩放铺满）
-    #     if not self.background_image.isNull():
-    #         scaled_pixmap = self.background_image.scaled(self.size(), Qt.KeepAspectRatioByExpanding, Qt.SmoothTransformation)
-    #         painter.drawPixmap(0, 0, scaled_pixmap)
-    #
-    #     # 添加一个顶部到底部的渐变遮罩（黑色到透明）
-    #     gradient = QLinearGradient(0, 0, 0, self.height())
-    #     gradient.setColorAt(0.0, QColor(0, 0, 0, 100))  # 顶部偏黑色
-    #     gradient.setColorAt(1.0, QColor(0, 0, 0, 30))   # 底部偏透明
-    #     painter.fillRect(self.rect(), QBrush(gradient))
+    def _resizeEvent(self, event):
+            self.backgroundMask.resize(self.size())
+            super().resizeEvent(event)
+
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+
+        # 绘制背景图（缩放铺满）
+        if not self.background_image.isNull():
+            scaled_pixmap = self.background_image.scaled(self.size(), Qt.KeepAspectRatioByExpanding, Qt.SmoothTransformation)
+            painter.drawPixmap(0, 0, scaled_pixmap)
+
+        # 添加一个顶部到底部的渐变遮罩（黑色到透明）
+        gradient = QLinearGradient(0, 0, 0, self.height())
+        gradient.setColorAt(0.0, QColor(0, 0, 0, 100))  # 顶部偏黑色
+        gradient.setColorAt(1.0, QColor(0, 0, 0, 30))   # 底部偏透明
+        painter.fillRect(self.rect(), QBrush(gradient))
 
     def systemTitleBarRect(self, size):
         return QRect(0, 0, 75, size.height())
