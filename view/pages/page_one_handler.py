@@ -1,5 +1,5 @@
 from PySide6.QtCore import QObject
-
+import pandas as pd
 from api.api import demo_api
 from common.utils import show_dialog
 from workers.TaskManager import task_manager
@@ -39,7 +39,7 @@ class PageOneHandler(QObject):
             file_path, file_type = QFileDialog.getOpenFileName(
                 self._parent,  # 父窗口
                 "选择数据文件",  # 对话框标题
-                "",  # 默认路径（空字符串表示当前目录）
+                "E:/pycharm_projects/pyqt/pyqt-fluent-widgets-template/pyqt_apriori/apriori",  # 默认路径设置为apriori文件夹
                 "所有支持的文件 (*.txt *.csv *.xlsx *.json);;文本文件 (*.txt);;CSV文件 (*.csv);;Excel文件 (*.xlsx);;JSON文件 (*.json);;所有文件 (*.*)"
                 # 文件类型过滤器
             )
@@ -59,15 +59,18 @@ class PageOneHandler(QObject):
             # 获取文件信息
             file_name = os.path.basename(file_path)
             file_size = os.path.getsize(file_path)
+            # 将字节转换为MB，并保留2位小数
+            file_size_mb = round(file_size / (1024 * 1024), 2)
 
-            # 这里可以根据你的需求处理文件
-            # 例如：读取文件内容、验证文件格式、显示文件信息等
+            # 读取CSV文件并显示在textEdit中
+            df = pd.read_csv(file_path, encoding='utf-8')
+            display_text = df.to_string()
+            self._parent.textEdit.setText(display_text)
 
-            message = f'已选择文件:\n文件名: {file_name}\n文件路径: {file_path}\n文件大小: {file_size} 字节'
+            # 显示文件信息弹窗
+            message = f'已选择文件:\n文件名: {file_name}\n文件路径: {file_path}\n文件大小: {file_size_mb} MB'
             show_dialog(self._parent, message, '文件选择成功')
 
-            # 如果需要异步处理文件，可以这样做：
-            # self.process_file_async(file_path)
 
         except Exception as e:
             show_dialog(self._parent, f'处理文件时出错: {str(e)}', '错误')

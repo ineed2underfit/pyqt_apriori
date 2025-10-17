@@ -1,0 +1,61 @@
+C:\Users\Administrator\.conda\envs\Bayesian\python.exe E:\PY_PRJ\new_bayesian\predict\predict.py 
+正在加载模型: E:\PY_PRJ\new_bayesian\pkl\bn_bayesian_model.pkl
+模型加载完成，耗时: 2.0454秒
+正在加载并预处理测试数据: E:\PY_PRJ\new_bayesian\dataset\testdata_info\training_dataset.csv
+读取数据...
+重命名列...
+对连续变量进行分箱...
+数据预处理完成，耗时: 2.0594秒
+测试数据行数: 5000
+测试数据列: ['部门', '温度', '振动', '油压', '电力', '转速', '故障类型']
+测试数据故障类型分布:
+故障类型
+正常运行      4750
+散热系统故障      81
+传动系统异常      63
+润滑系统异常      63
+电力供应故障      43
+Name: count, dtype: int64
+
+模型节点:
+- rpm
+- 故障类型
+- voltage
+- oil_pressure
+- department
+- temp
+- vibration
+
+开始预测过程...
+可能的故障类型: ['正常运行' '传动系统异常' '散热系统故障' '润滑系统异常' '电力供应故障']
+预计算条件概率表...
+开始预测...
+预测进度: 100%|██████████| 5000/5000 [00:00<00:00, 7092.44it/s]
+预测准确率: 0.9998
+
+混淆矩阵:
+[[  63    0    0    0    0]
+ [   0   81    0    0    0]
+ [   0    1 4749    0    0]
+ [   0    0    0   63    0]
+ [   0    0    0    0   43]]
+
+分类报告:
+              precision    recall  f1-score   support
+
+      传动系统异常       1.00      1.00      1.00        63
+      散热系统故障       0.99      1.00      0.99        81
+        正常运行       1.00      1.00      1.00      4750
+      润滑系统异常       1.00      1.00      1.00        63
+      电力供应故障       1.00      1.00      1.00        43
+
+    accuracy                           1.00      5000
+   macro avg       1.00      1.00      1.00      5000
+weighted avg       1.00      1.00      1.00      5000
+
+预测完成，耗时: 1.0733秒
+
+总耗时: 3.1337秒
+结果已保存到: E:\PY_PRJ\new_bayesian\predict\results
+
+进程已结束，退出代码为 0

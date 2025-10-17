@@ -21,9 +21,9 @@ class Page4(QWidget, Ui_page_4):
 
     def bind_event(self):
         # View 将按钮点击事件委托给 Handler
-        self.pushButton_4.clicked.connect(self.handler.select_file) # 绑定事件
-        self.pushButton_y.clicked.connect(self.handler.show_case_lib_popout) # 绑定事件
-        self.pushButton_n.clicked.connect(self.handler.show_question_lib_confirm_dialog) # 绑定事件
+        self.pushButton_6.clicked.connect(self.handler.select_file) # 绑定事件
+        self.pushButton_7.clicked.connect(self.handler.show_case_lib_popout) # 绑定事件
+        # self.pushButton_n.clicked.connect(self.handler.show_question_lib_confirm_dialog) # 绑定事件
 
     def show_state_tooltip(self, title, content):
         self.loading_bar = ProgressInfoBar(title, content, self)

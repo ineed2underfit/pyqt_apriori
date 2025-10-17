@@ -1,0 +1,77 @@
+C:\Users\Administrator\.conda\envs\Bayesian\python.exe E:\PY_PRJ\new_bayesian\BN_new\bn_bayesian.py 
+正在加载数据: ../dataset/data_info/training_dataset.csv
+数据加载成功，共 100000 条记录，9 个特征
+数据加载耗时: 0.13 秒
+开始数据预处理...
+
+数据列名:
+['timestamp', 'device_id', 'department', 'temp', 'vibration', 'oil_pressure', 'voltage', 'rpm', '故障类型']
+处理变量: temp
+处理变量: vibration
+处理变量: oil_pressure
+处理变量: voltage
+处理变量: rpm
+处理部门变量
+数据预处理完成
+数据预处理耗时: 0.02 秒
+正在加载规则: ../dataset/optimal_rules.csv
+规则加载成功，共 4 条规则
+规则加载耗时: 0.00 秒
+开始处理规则...
+
+处理规则:
+
+规则: 中电力 ∧ 极高转速 → 传动系统异常
+前因条件: ['中电力', '极高转速']
+条件 '中电力' 映射为变量 'voltage'
+条件 '极高转速' 映射为变量 'rpm'
+
+规则: 极高振动 ∧ 极高温 → 散热系统故障
+前因条件: ['极高振动', '极高温']
+条件 '极高振动' 映射为变量 'vibration'
+条件 '极高温' 映射为变量 'temp'
+
+规则: 中转速 ∧ 极低油压 ∧ 部门_研发部 → 润滑系统异常
+前因条件: ['中转速', '极低油压', '部门_研发部']
+条件 '中转速' 映射为变量 'rpm'
+条件 '极低油压' 映射为变量 'oil_pressure'
+条件 '部门_研发部' 映射为变量 'department'
+
+规则: 中转速 ∧ 极低电力 ∧ 极高油压 → 电力供应故障
+前因条件: ['中转速', '极低电力', '极高油压']
+条件 '中转速' 映射为变量 'rpm'
+条件 '极低电力' 映射为变量 'voltage'
+条件 '极高油压' 映射为变量 'oil_pressure'
+
+网络结构构建完成，共 6 条边:
+边: department -> 故障类型
+边: vibration -> 故障类型
+边: temp -> 故障类型
+边: voltage -> 故障类型
+边: rpm -> 故障类型
+边: oil_pressure -> 故障类型
+规则处理耗时: 0.00 秒
+开始构建贝叶斯网络...
+贝叶斯网络构建成功
+网络构建耗时: 0.00 秒
+开始可视化网络结构...
+网络结构图已保存至: ../bayesian_result/network_structure.png
+开始进行贝叶斯参数估计...
+
+数据列名:
+['department', 'temp', 'vibration', 'oil_pressure', 'voltage', 'rpm', '故障类型']
+
+模型节点:
+['department', '故障类型', 'vibration', 'temp', 'voltage', 'rpm', 'oil_pressure']
+模型已保存至: ../pkl\bn_bayesian_model.pkl
+100%|██████████| 1699/1699 [00:05<00:00, 292.98it/s]
+分类报告已保存至: ../bayesian_result\classification_report.txt
+混淆矩阵已保存至: ../bayesian_result\confusion_matrix.png
+贝叶斯参数估计完成
+参数估计耗时: 7.34 秒
+
+总运行时间: 7.80 秒
+
+程序总运行时间: 7.80 秒
+
+进程已结束，退出代码为 0

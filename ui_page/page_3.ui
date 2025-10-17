@@ -23,20 +23,16 @@
       </size>
      </property>
      <property name="text">
-      <string>规则提取</string>
+      <string>构建贝叶斯网络</string>
+     </property>
+     <property name="checkable">
+      <bool>false</bool>
      </property>
      <property name="autoDefault">
-      <bool>false</bool>
+      <bool>true</bool>
      </property>
      <property name="default">
-      <bool>false</bool>
-     </property>
-    </widget>
-   </item>
-   <item>
-    <widget class="QProgressBar" name="progressBar">
-     <property name="value">
-      <number>100</number>
+      <bool>true</bool>
      </property>
     </widget>
    </item>

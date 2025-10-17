@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>page_5</class>
+ <widget class="QWidget" name="page_5">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>712</width>
+    <height>484</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <item>
+      <widget class="QComboBox" name="comboBox_2">
+       <property name="minimumSize">
+        <size>
+         <width>0</width>
+         <height>25</height>
+        </size>
+       </property>
+       <property name="editable">
+        <bool>true</bool>
+       </property>
+       <item>
+        <property name="text">
+         <string>DEV-001</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-002</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-003</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-004</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-005</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-006</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-007</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-008</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-009</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-010</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pushButton_2">
+       <property name="minimumSize">
+        <size>
+         <width>0</width>
+         <height>30</height>
+        </size>
+       </property>
+       <property name="text">
+        <string>查询设备故障记录</string>
+       </property>
+       <property name="checkable">
+        <bool>false</bool>
+       </property>
+       <property name="autoDefault">
+        <bool>true</bool>
+       </property>
+       <property name="default">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QTextEdit" name="textEdit"/>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

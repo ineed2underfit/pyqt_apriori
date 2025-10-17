@@ -15,12 +15,13 @@ class PageOne(QWidget, Ui_page_one):
         self.handler = PageOneHandler(self)
         self.bind_event()
 
+    # 主动功能（绑定相关）：
     def bind_event(self):
         # View 将按钮点击事件委托给 Handler
         self.pushButton.clicked.connect(self.handler.select_file) # 绑定事件
-        self.pushButton_2.clicked.connect(self.handler.handle_case_split) # 绑定事件
+        # self.pushButton_2.clicked.connect(self.handler.handle_case_split) # 绑定事件
 
-
+    # 被动显示（辅助函数）：
     def show_state_tooltip(self, title, content):
         self.loading_bar = ProgressInfoBar(title, content, self)
         self.loading_bar.show()

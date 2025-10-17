@@ -15,8 +15,8 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QProgressBar, QPushButton, QSizePolicy,
-    QTextEdit, QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QApplication, QPushButton, QSizePolicy, QTextEdit,
+    QVBoxLayout, QWidget)
 
 class Ui_page_3(object):
     def setupUi(self, page_3):
@@ -28,15 +28,10 @@ class Ui_page_3(object):
         self.pushButton_2 = QPushButton(page_3)
         self.pushButton_2.setObjectName(u"pushButton_2")
         self.pushButton_2.setMinimumSize(QSize(0, 30))
-        self.pushButton_2.setAutoDefault(False)
+        self.pushButton_2.setCheckable(False)
+        self.pushButton_2.setAutoDefault(True)
 
         self.verticalLayout.addWidget(self.pushButton_2)
-
-        self.progressBar = QProgressBar(page_3)
-        self.progressBar.setObjectName(u"progressBar")
-        self.progressBar.setValue(100)
-
-        self.verticalLayout.addWidget(self.progressBar)
 
         self.textEdit = QTextEdit(page_3)
         self.textEdit.setObjectName(u"textEdit")
@@ -46,7 +41,7 @@ class Ui_page_3(object):
 
         self.retranslateUi(page_3)
 
-        self.pushButton_2.setDefault(False)
+        self.pushButton_2.setDefault(True)
 
 
         QMetaObject.connectSlotsByName(page_3)
@@ -54,6 +49,6 @@ class Ui_page_3(object):
 
     def retranslateUi(self, page_3):
         page_3.setWindowTitle(QCoreApplication.translate("page_3", u"Form", None))
-        self.pushButton_2.setText(QCoreApplication.translate("page_3", u"\u89c4\u5219\u63d0\u53d6", None))
+        self.pushButton_2.setText(QCoreApplication.translate("page_3", u"\u6784\u5efa\u8d1d\u53f6\u65af\u7f51\u7edc", None))
     # retranslateUi
 
