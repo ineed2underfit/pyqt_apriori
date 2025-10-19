@@ -15,33 +15,43 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QPushButton, QSizePolicy, QTextEdit,
-    QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QApplication, QGraphicsView, QHBoxLayout, QPushButton,
+    QSizePolicy, QVBoxLayout, QWidget)
 
 class Ui_page_3(object):
     def setupUi(self, page_3):
         if not page_3.objectName():
             page_3.setObjectName(u"page_3")
         page_3.resize(712, 484)
-        self.verticalLayout = QVBoxLayout(page_3)
+        self.verticalLayout_2 = QVBoxLayout(page_3)
+        self.verticalLayout_2.setObjectName(u"verticalLayout_2")
+        self.verticalLayout = QVBoxLayout()
         self.verticalLayout.setObjectName(u"verticalLayout")
-        self.pushButton_2 = QPushButton(page_3)
-        self.pushButton_2.setObjectName(u"pushButton_2")
-        self.pushButton_2.setMinimumSize(QSize(0, 30))
-        self.pushButton_2.setCheckable(False)
-        self.pushButton_2.setAutoDefault(True)
+        self.horizontalLayout = QHBoxLayout()
+        self.horizontalLayout.setObjectName(u"horizontalLayout")
+        self.pushButton = QPushButton(page_3)
+        self.pushButton.setObjectName(u"pushButton")
+        self.pushButton.setMinimumSize(QSize(0, 30))
+        self.pushButton.setCheckable(False)
+        self.pushButton.setAutoDefault(True)
 
-        self.verticalLayout.addWidget(self.pushButton_2)
+        self.horizontalLayout.addWidget(self.pushButton)
 
-        self.textEdit = QTextEdit(page_3)
-        self.textEdit.setObjectName(u"textEdit")
 
-        self.verticalLayout.addWidget(self.textEdit)
+        self.verticalLayout.addLayout(self.horizontalLayout)
+
+        self.graphicsView = QGraphicsView(page_3)
+        self.graphicsView.setObjectName(u"graphicsView")
+
+        self.verticalLayout.addWidget(self.graphicsView)
+
+
+        self.verticalLayout_2.addLayout(self.verticalLayout)
 
 
         self.retranslateUi(page_3)
 
-        self.pushButton_2.setDefault(True)
+        self.pushButton.setDefault(False)
 
 
         QMetaObject.connectSlotsByName(page_3)
@@ -49,6 +59,6 @@ class Ui_page_3(object):
 
     def retranslateUi(self, page_3):
         page_3.setWindowTitle(QCoreApplication.translate("page_3", u"Form", None))
-        self.pushButton_2.setText(QCoreApplication.translate("page_3", u"\u6784\u5efa\u8d1d\u53f6\u65af\u7f51\u7edc", None))
+        self.pushButton.setText(QCoreApplication.translate("page_3", u"\u6784\u5efa\u8d1d\u53f6\u65af\u7f51\u7edc", None))
     # retranslateUi
 

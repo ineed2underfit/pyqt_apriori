@@ -1,4 +1,5 @@
 from PySide6.QtWidgets import QWidget
+from PySide6.QtCore import Signal
 
 from common.utils import show_dialog
 from components.bar import ProgressInfoBar
@@ -7,6 +8,9 @@ from view.pages.page_one_handler import PageOneHandler
 
 
 class PageOne(QWidget, Ui_page_one):
+    # 添加文件选择信号
+    file_selected = Signal(str)
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.loading_bar = None
@@ -33,3 +37,7 @@ class PageOne(QWidget, Ui_page_one):
 
     def on_common_error(self, msg):
         show_dialog(self, msg, '提示')
+
+    def emit_file_selected(self, file_path):
+        """发送文件选择信号"""
+        self.file_selected.emit(file_path)

@@ -33,6 +33,9 @@ class MainWindow(FluentWindow):
         self.page4 = Page4(self)
         self.page5 = Page5(self)
 
+        # 连接页面一和页面二的信号
+        self.pageOne.file_selected.connect(self.on_file_path_changed)
+
         self.init_navigation()
         self.init_window()
 
@@ -94,3 +97,7 @@ class MainWindow(FluentWindow):
         self.resize(900, 700)
         self.move((self.screen().size().width() - self.width()) / 2,
                   (self.screen().size().height() - self.height()) / 2)
+
+    def on_file_path_changed(self, path):
+        """处理文件路径变化"""
+        self.pageTwo.set_dataset_path(path)

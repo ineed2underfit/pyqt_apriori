@@ -16,6 +16,33 @@
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
     <layout class="QGridLayout" name="gridLayout">
+     <item row="2" column="0">
+      <widget class="QLabel" name="label_2">
+       <property name="text">
+        <string>最小置信度</string>
+       </property>
+      </widget>
+     </item>
+     <item row="5" column="0">
+      <widget class="QDoubleSpinBox" name="doubleSpinBox">
+       <property name="minimum">
+        <double>0.000000000000000</double>
+       </property>
+       <property name="singleStep">
+        <double>0.100000000000000</double>
+       </property>
+       <property name="value">
+        <double>1.200000000000000</double>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="0">
+      <widget class="QLabel" name="label_3">
+       <property name="text">
+        <string>最小提升度</string>
+       </property>
+      </widget>
+     </item>
      <item row="1" column="0">
       <widget class="QDoubleSpinBox" name="doubleSpinBox_2">
        <property name="sizePolicy">
@@ -31,7 +58,7 @@
         <bool>true</bool>
        </property>
        <property name="buttonSymbols">
-        <enum>QAbstractSpinBox::ButtonSymbols::UpDownArrows</enum>
+        <enum>QAbstractSpinBox::UpDownArrows</enum>
        </property>
        <property name="decimals">
         <number>4</number>
@@ -50,27 +77,6 @@
        </property>
       </widget>
      </item>
-     <item row="0" column="0">
-      <widget class="QLabel" name="label">
-       <property name="text">
-        <string>最小支持度</string>
-       </property>
-      </widget>
-     </item>
-     <item row="2" column="0">
-      <widget class="QLabel" name="label_2">
-       <property name="text">
-        <string>最小置信度</string>
-       </property>
-      </widget>
-     </item>
-     <item row="4" column="0">
-      <widget class="QLabel" name="label_3">
-       <property name="text">
-        <string>最小提升度</string>
-       </property>
-      </widget>
-     </item>
      <item row="3" column="0">
       <widget class="QDoubleSpinBox" name="doubleSpinBox_3">
        <property name="sizePolicy">
@@ -86,54 +92,75 @@
         <double>0.001000000000000</double>
        </property>
        <property name="value">
-        <double>0.005000000000000</double>
+        <double>0.500000000000000</double>
        </property>
       </widget>
      </item>
-     <item row="5" column="0">
-      <widget class="QDoubleSpinBox" name="doubleSpinBox">
-       <property name="minimum">
-        <double>0.000000000000000</double>
-       </property>
-       <property name="singleStep">
-        <double>0.100000000000000</double>
-       </property>
-       <property name="value">
-        <double>1.200000000000000</double>
-       </property>
-      </widget>
-     </item>
-     <item row="0" column="1" rowspan="6">
-      <widget class="QPushButton" name="pushButton_2">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="minimumSize">
-        <size>
-         <width>0</width>
-         <height>30</height>
-        </size>
-       </property>
+     <item row="0" column="0">
+      <widget class="QLabel" name="label">
        <property name="text">
-        <string>提取语料</string>
-       </property>
-       <property name="autoDefault">
-        <bool>true</bool>
-       </property>
-       <property name="default">
-        <bool>true</bool>
+        <string>最小支持度</string>
        </property>
       </widget>
+     </item>
+     <item row="0" column="2" rowspan="6">
+      <layout class="QHBoxLayout" name="horizontalLayout_2">
+       <item>
+        <widget class="QPushButton" name="pushButton_2">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>30</height>
+          </size>
+         </property>
+         <property name="text">
+          <string>提取语料</string>
+         </property>
+         <property name="autoDefault">
+          <bool>true</bool>
+         </property>
+         <property name="default">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="pushButton">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+           <horstretch>1</horstretch>
+           <verstretch>1</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="text">
+          <string>规则
+优化</string>
+         </property>
+         <property name="autoDefault">
+          <bool>true</bool>
+         </property>
+         <property name="default">
+          <bool>false</bool>
+         </property>
+        </widget>
+       </item>
+      </layout>
      </item>
     </layout>
    </item>
    <item>
     <widget class="QProgressBar" name="progressBar">
+     <property name="autoFillBackground">
+      <bool>false</bool>
+     </property>
      <property name="value">
-      <number>100</number>
+      <number>0</number>
      </property>
     </widget>
    </item>

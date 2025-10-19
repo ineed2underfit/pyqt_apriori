@@ -67,6 +67,9 @@ class PageOneHandler(QObject):
             display_text = df.to_string()
             self._parent.textEdit.setText(display_text)
 
+            # 发出文件选择信号
+            self._parent.emit_file_selected(file_path)
+
             # 显示文件信息弹窗
             message = f'已选择文件:\n文件名: {file_name}\n文件路径: {file_path}\n文件大小: {file_size_mb} MB'
             show_dialog(self._parent, message, '文件选择成功')
