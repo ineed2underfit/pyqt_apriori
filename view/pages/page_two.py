@@ -28,7 +28,6 @@ class PageTwo(QWidget, Ui_page_two):
         self.doubleSpinBox_3.setValue(0.5)    # 最小置信度 (confidence)
         self.pushButton_2.setEnabled(False)     # 开始挖掘按钮初始禁用
         self.progressBar.setValue(0)            # 重置进度条为0
-        self.progressBar.setStyleSheet("")      # 恢复进度条为主题默认颜色
 
         # 创建并设置数据集标签
         self.label_dataset = QLabel("当前数据集：未选择")
@@ -42,6 +41,8 @@ class PageTwo(QWidget, Ui_page_two):
     def bind_event(self):
         # 绑定开始挖掘按钮
         self.pushButton_2.clicked.connect(self.handler.start_mining)
+        # 绑定规则优化按钮
+        self.pushButton.clicked.connect(self.handler.optimize_rules)
 
         # 绑定参数调整的信号
         self.doubleSpinBox.valueChanged.connect(self.handler.on_parameter_changed)

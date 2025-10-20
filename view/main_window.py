@@ -33,8 +33,15 @@ class MainWindow(FluentWindow):
         self.page4 = Page4(self)
         self.page5 = Page5(self)
 
-        # 连接页面一和页面二的信号
+        # 数据中心: 用于存储跨页面共享的数据
+        self.dataset_path = None
+        self.initial_rules_df = None
+        self.optimized_rules_df = None
+
+        # 连接信号与槽
         self.pageOne.file_selected.connect(self.on_file_path_changed)
+        self.pageTwo.handler.initial_rules_ready.connect(self.on_initial_rules_ready)
+        self.pageTwo.handler.optimized_rules_ready.connect(self.on_optimized_rules_ready)
 
         self.init_navigation()
         self.init_window()
@@ -100,4 +107,15 @@ class MainWindow(FluentWindow):
 
     def on_file_path_changed(self, path):
         """处理文件路径变化"""
+        self.dataset_path = path  # 保存原始数据集路径
         self.pageTwo.set_dataset_path(path)
+
+    def on_initial_rules_ready(self, df):
+        """接收并存储初始规则"""
+        print(f"主窗口已接收到 {len(df)} 条初始规则。")
+        self.initial_rules_df = df
+
+    def on_optimized_rules_ready(self, df):
+        """接收并存储优化后的规则"""
+        print(f"主窗口已接收到 {len(df)} 条优化后规则。")
+        self.optimized_rules_df = df

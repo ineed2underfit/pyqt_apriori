@@ -1,14 +1,14 @@
 from PySide6.QtWidgets import QDialog, QVBoxLayout, QPlainTextEdit, QPushButton
-from PySide6.QtCore import QSettings
+from PySide6.QtCore import QSettings, QByteArray
 
 class LogDialog(QDialog):
-    def __init__(self, parent=None):
+    def __init__(self, title="过程日志", parent=None):
         super().__init__(parent)
-        self.setWindowTitle("挖掘过程日志")
-        self.setMinimumSize(400, 300)
+        self.setWindowTitle(title)
+        self.setMinimumSize(600, 400)
 
         # 初始化QSettings
-        self.settings = QSettings("PyQtApriori", "AprioriMiner")
+        self.settings = QSettings("MyCompany", "AprioriApp")
 
         # 布局和控件
         layout = QVBoxLayout(self)
@@ -27,12 +27,12 @@ class LogDialog(QDialog):
 
     def closeEvent(self, event):
         # 保存窗口位置和大小
-        self.settings.setValue("LogDialog/geometry", self.saveGeometry())
-        event.accept()
+        self.settings.setValue(f"LogDialog/{self.windowTitle()}/geometry", self.saveGeometry())
+        super().closeEvent(event)
 
     def restore_geometry(self):
-        geometry = self.settings.value("LogDialog/geometry")
-        if geometry:
+        geometry = self.settings.value(f"LogDialog/{self.windowTitle()}/geometry")
+        if isinstance(geometry, QByteArray):
             self.restoreGeometry(geometry)
 
     def append_log(self, message):

@@ -15,8 +15,8 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QGraphicsView, QHBoxLayout, QPushButton,
-    QSizePolicy, QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QApplication, QGraphicsView, QHBoxLayout, QProgressBar,
+    QPushButton, QSizePolicy, QVBoxLayout, QWidget)
 
 class Ui_page_3(object):
     def setupUi(self, page_3):
@@ -39,6 +39,12 @@ class Ui_page_3(object):
 
 
         self.verticalLayout.addLayout(self.horizontalLayout)
+
+        self.progressBar = QProgressBar(page_3)
+        self.progressBar.setObjectName(u"progressBar")
+        self.progressBar.setValue(0)
+
+        self.verticalLayout.addWidget(self.progressBar)
 
         self.graphicsView = QGraphicsView(page_3)
         self.graphicsView.setObjectName(u"graphicsView")
