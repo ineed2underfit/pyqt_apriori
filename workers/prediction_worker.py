@@ -10,8 +10,9 @@ from predict import main as run_batch_prediction, predict_single, load_model
 class PredictionWorker(QObject):
     """在后台执行预测任务的工作者（支持批量和单次）"""
     batch_finished = Signal(str)   # 批量任务完成信号，返回报告文本
-    single_prediction_finished = Signal(str, object) # 单次预测完成信号，返回预测结果字符串和原始输入数据字典
+    single_prediction_finished = Signal(str, object, object) # 单次预测完成信号，返回预测结果字符串、原始输入数据字典和概率分布字典
     error = Signal(str)      # 任务失败信号
+    progress_updated = Signal(int)  # 进度更新信号，传递进度值(0-100)
 
     def __init__(self, model_path, data):
         super().__init__()
@@ -37,11 +38,22 @@ class PredictionWorker(QObject):
                 self.batch_finished.emit(report_content)
 
             elif isinstance(self.data, dict): # --- 单次预测模式 ---
-                # 加载模型
-                model = load_model(self.model_path)
-                # 调用单次预测函数
-                prediction_result = predict_single(model, self.data)
-                self.single_prediction_finished.emit(prediction_result, self.data) # 发送预测结果和原始输入数据
+                # 0-20%: 初始化
+                self.progress_updated.emit(10)
+                
+                # 20-50%: 加载模型和分箱配置
+                self.progress_updated.emit(20)
+                model, bin_config = load_model(self.model_path)
+                self.progress_updated.emit(50)
+                
+                # 50-90%: 执行预测
+                self.progress_updated.emit(60)
+                prediction_result, probability_dist = predict_single(model, self.data, bin_config)
+                self.progress_updated.emit(90)
+                
+                # 90-100%: 完成
+                self.progress_updated.emit(100)
+                self.single_prediction_finished.emit(prediction_result, self.data, probability_dist) # 发送预测结果、原始输入数据和概率分布
 
         except Exception as e:
             import traceback

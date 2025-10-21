@@ -16,9 +16,9 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QComboBox, QDateTimeEdit, QDoubleSpinBox,
-    QHBoxLayout, QLabel, QPushButton, QScrollArea,
-    QSizePolicy, QSpacerItem, QSplitter, QTextEdit,
-    QVBoxLayout, QWidget)
+    QHBoxLayout, QLabel, QProgressBar, QPushButton,
+    QScrollArea, QSizePolicy, QSpacerItem, QSplitter,
+    QTextEdit, QVBoxLayout, QWidget)
 
 class Ui_page_4(object):
     def setupUi(self, page_4):
@@ -80,7 +80,7 @@ class Ui_page_4(object):
         self.scrollArea.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, -78, 537, 444))
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 537, 444))
         self.horizontalLayout_4 = QHBoxLayout(self.scrollAreaWidgetContents)
         self.horizontalLayout_4.setObjectName(u"horizontalLayout_4")
         self.verticalLayout = QVBoxLayout()
@@ -254,16 +254,27 @@ class Ui_page_4(object):
 
         self.verticalLayout_4.addWidget(self.pushButton_solely)
 
+        self.progressBar = QProgressBar(self.scrollAreaWidgetContents)
+        self.progressBar.setObjectName(u"progressBar")
+        sizePolicy4 = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
+        sizePolicy4.setHorizontalStretch(0)
+        sizePolicy4.setVerticalStretch(0)
+        sizePolicy4.setHeightForWidth(self.progressBar.sizePolicy().hasHeightForWidth())
+        self.progressBar.setSizePolicy(sizePolicy4)
+        self.progressBar.setValue(0)
+
+        self.verticalLayout_4.addWidget(self.progressBar)
+
 
         self.verticalLayout_2.addLayout(self.verticalLayout_4)
 
         self.textEdit_solely = QTextEdit(self.scrollAreaWidgetContents)
         self.textEdit_solely.setObjectName(u"textEdit_solely")
-        sizePolicy4 = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
-        sizePolicy4.setHorizontalStretch(0)
-        sizePolicy4.setVerticalStretch(0)
-        sizePolicy4.setHeightForWidth(self.textEdit_solely.sizePolicy().hasHeightForWidth())
-        self.textEdit_solely.setSizePolicy(sizePolicy4)
+        sizePolicy5 = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
+        sizePolicy5.setHorizontalStretch(0)
+        sizePolicy5.setVerticalStretch(0)
+        sizePolicy5.setHeightForWidth(self.textEdit_solely.sizePolicy().hasHeightForWidth())
+        self.textEdit_solely.setSizePolicy(sizePolicy5)
 
         self.verticalLayout_2.addWidget(self.textEdit_solely)
 

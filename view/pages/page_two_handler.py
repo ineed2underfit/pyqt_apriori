@@ -82,8 +82,8 @@ class PageTwoHandler(QObject):
             self.optimized_rules_ready.emit(best_rules_df)
 
             # 4. 更新PageTwo的UI
-            output = "已生成优化规则：\n\n" + best_rules_df.to_markdown(index=False)
-            self._parent.textEdit_3.setText(output)
+            output = self._format_rules_html(best_rules_df, "规则优化完成")
+            self._parent.textEdit_3.setHtml(output)
             
             # 5. 更新进度条并显示成功信息
             self._parent.update_progress(100, "规则优化完成")
@@ -101,8 +101,9 @@ class PageTwoHandler(QObject):
         self._parent.pushButton.setEnabled(True)
 
         try:
-            output = "初始规则提取完成：\n\n" + results_df.to_markdown(index=False)
-            self._parent.textEdit_3.setText(output)
+            # 使用HTML格式化显示规则
+            output = self._format_rules_html(results_df, "初始规则提取完成")
+            self._parent.textEdit_3.setHtml(output)
             self._parent.textEdit_3.verticalScrollBar().setValue(0)
 
         except Exception as e:
@@ -123,3 +124,84 @@ class PageTwoHandler(QObject):
 
     def on_parameter_changed(self):
         pass
+
+    def _format_rules_html(self, rules_df, title):
+        """将规则DataFrame格式化为美观的HTML显示"""
+        html = '<div style="font-size: 10pt; line-height: 1.6; font-family: Arial, sans-serif;">'
+        
+        # 标题
+        html += f'<div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #2c3e50; padding: 12px; border-radius: 6px; margin-bottom: 15px; text-align: left;">'
+        html += f'<h2 style="margin: 0; font-size: 12pt; font-weight: bold;">📊 {title}</h2>'
+        html += f'<p style="margin: 5px 0 0 0; font-size: 9pt; color: #34495e;">共发现 {len(rules_df)} 条规则</p>'
+        html += '</div>'
+        
+        # 规则表格
+        html += '<table style="width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">'
+        
+        # 表头
+        html += '<thead style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: #2c3e50;">'
+        html += '<tr>'
+        for col in rules_df.columns:
+            html += f'<th style="padding: 10px 8px; text-align: left; font-weight: bold; font-size: 9pt;">{col}</th>'
+        html += '</tr>'
+        html += '</thead>'
+        
+        # 表格内容
+        html += '<tbody>'
+        for idx, row in rules_df.iterrows():
+            # 交替行颜色
+            row_style = "background-color: #f8f9fa;" if idx % 2 == 0 else "background-color: white;"
+            html += f'<tr style="{row_style}">'
+            
+            for col in rules_df.columns:
+                value = row[col]
+                
+                # 特殊处理规则列，添加样式
+                if col == '规则':
+                    # 高亮显示规则
+                    html += f'<td style="padding: 10px 8px; font-family: monospace; font-size: 9pt; color: #2c3e50; background-color: #ecf0f1; border-left: 4px solid #3498db;">{value}</td>'
+                elif col in ['支持度', '置信度', '提升度']:
+                    # 数值列，右对齐并添加颜色
+                    if isinstance(value, (int, float)):
+                        if col == '提升度' and value > 2:
+                            color = "#27ae60"  # 绿色表示高提升度
+                        elif col == '置信度' and value > 0.8:
+                            color = "#e67e22"  # 橙色表示高置信度
+                        else:
+                            color = "#34495e"
+                        html += f'<td style="padding: 10px 8px; text-align: right; font-weight: bold; color: {color};">{value:.3f}</td>'
+                    else:
+                        html += f'<td style="padding: 10px 8px; text-align: right;">{value}</td>'
+                else:
+                    # 普通列
+                    html += f'<td style="padding: 10px 8px; color: #2c3e50;">{value}</td>'
+            
+            html += '</tr>'
+        
+        html += '</tbody>'
+        html += '</table>'
+        
+        # 统计信息
+        if len(rules_df) > 0:
+            html += '<div style="margin-top: 15px; padding: 12px; background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); border-radius: 6px;">'
+            html += '<h3 style="margin: 0 0 8px 0; color: #2c3e50; font-size: 10pt;">📈 规则统计</h3>'
+            
+            # 计算统计信息
+            if '支持度' in rules_df.columns:
+                avg_support = rules_df['支持度'].mean()
+                html += f'<p style="margin: 5px 0; color: #34495e;"><strong>平均支持度:</strong> {avg_support:.3f}</p>'
+            
+            if '置信度' in rules_df.columns:
+                avg_confidence = rules_df['置信度'].mean()
+                html += f'<p style="margin: 5px 0; color: #34495e;"><strong>平均置信度:</strong> {avg_confidence:.3f}</p>'
+            
+            if '提升度' in rules_df.columns:
+                avg_lift = rules_df['提升度'].mean()
+                max_lift = rules_df['提升度'].max()
+                html += f'<p style="margin: 5px 0; color: #34495e;"><strong>平均提升度:</strong> {avg_lift:.3f}</p>'
+                html += f'<p style="margin: 5px 0; color: #34495e;"><strong>最高提升度:</strong> {max_lift:.3f}</p>'
+            
+            html += '</div>'
+        
+        html += '</div>'
+        return html

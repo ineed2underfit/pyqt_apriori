@@ -55,7 +55,7 @@ class Ui_page_two(object):
         self.doubleSpinBox_2.setSizePolicy(sizePolicy)
         self.doubleSpinBox_2.setWrapping(False)
         self.doubleSpinBox_2.setFrame(True)
-        self.doubleSpinBox_2.setButtonSymbols(QAbstractSpinBox.UpDownArrows)
+        self.doubleSpinBox_2.setButtonSymbols(QAbstractSpinBox.ButtonSymbols.UpDownArrows)
         self.doubleSpinBox_2.setDecimals(4)
         self.doubleSpinBox_2.setMinimum(0.000000000000000)
         self.doubleSpinBox_2.setMaximum(96.989999999999995)
@@ -112,6 +112,7 @@ class Ui_page_two(object):
 
         self.progressBar = QProgressBar(page_two)
         self.progressBar.setObjectName(u"progressBar")
+        self.progressBar.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.progressBar.setAutoFillBackground(False)
         self.progressBar.setValue(0)
 

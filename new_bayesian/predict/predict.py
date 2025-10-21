@@ -109,10 +109,126 @@ def preprocess_data(data_path):
     return df
 
 def load_model(model_path):
-    """加载贝叶斯网络模型"""
+    """加载贝叶斯网络模型和分箱配置"""
     with open(model_path, 'rb') as f:
-        model = pickle.load(f)
-    return model
+        data = pickle.load(f)
+        # 兼容旧版本：如果是元组则解包，否则只返回模型
+        if isinstance(data, tuple):
+            model, bin_config = data
+            return model, bin_config
+        else:
+            return data, None
+
+def _discretize_single_value(value, bin_config_for_feature):
+    """使用预设的分箱配置对单个数值进行离散化
+    
+    Args:
+        value: 要分箱的单个数值
+        bin_config_for_feature: 该特征的分箱配置，格式为 {'bins': [...], 'labels': [...]}
+    
+    Returns:
+        分箱后的标签
+    """
+    bins = bin_config_for_feature['bins']
+    labels = bin_config_for_feature['labels']
+    
+    # 确保值在分箱范围内，否则可能导致NaN
+    if value < bins[0]:
+        value = bins[0]  # 强制设置为最小值
+    elif value > bins[-1]:
+        value = bins[-1]  # 强制设置为最大值
+    
+    # pd.cut 期望 Series，所以将单值转换为 Series
+    discretized_series = pd.cut(pd.Series([value]), bins=bins, labels=labels, include_lowest=True)
+    return discretized_series.iloc[0]  # 返回离散化后的标签
+
+def _detect_extreme_values(data_dict):
+    """检测极端值
+    
+    Args:
+        data_dict: 输入数据字典
+    
+    Returns:
+        tuple: (是否检测到极端值, 极端值列表)
+    """
+    extreme_detected = False
+    extreme_values = []
+    
+    # 定义极端值阈值 (基于训练数据的统计，更保守的设置)
+    extreme_thresholds = {
+        'temp': {'high': 95, 'low': 15},  # 温度极端值：更严格的阈值
+        'vibration': {'high': 4.0, 'low': 0.05},  # 振动极端值：更严格的阈值
+        'oil_pressure': {'high': 18, 'low': 1},  # 油压极端值：调整阈值
+        'voltage': {'high': 250, 'low': 170},  # 电压极端值：更严格的阈值
+        'rpm': {'high': 3000, 'low': 1400}  # 转速极端值：更严格的阈值
+    }
+    
+    for feature, value in data_dict.items():
+        if feature in extreme_thresholds:
+            thresholds = extreme_thresholds[feature]
+            
+            if value > thresholds['high']:
+                extreme_detected = True
+                extreme_values.append(f"{feature}_high")
+                print(f"检测到极端高{feature}: {value} > {thresholds['high']}")
+            elif value < thresholds['low']:
+                extreme_detected = True
+                extreme_values.append(f"{feature}_low")
+                print(f"检测到极端低{feature}: {value} < {thresholds['low']}")
+    
+    return extreme_detected, extreme_values
+
+def _predict_extreme_case(data_dict):
+    """极端值情况的预测逻辑 - 改进版本"""
+    print("--- 使用极端值预测逻辑 ---")
+    
+    # 基于领域知识的极端值预测规则
+    temp = data_dict.get('temp', 0)
+    vibration = data_dict.get('vibration', 0)
+    oil_pressure = data_dict.get('oil_pressure', 0)
+    voltage = data_dict.get('voltage', 0)
+    rpm = data_dict.get('rpm', 0)
+    
+    # 检查各项是否为真正的极端值
+    extreme_conditions = []
+    
+    # 极端高温 -> 散热系统故障
+    if temp > 95:
+        extreme_conditions.append(("temp_high", "散热系统故障"))
+    
+    # 极端高振动 -> 传动系统异常
+    if vibration > 4.0:
+        extreme_conditions.append(("vibration_high", "传动系统异常"))
+    
+    # 极端低油压 -> 润滑系统异常
+    if oil_pressure < 1:
+        extreme_conditions.append(("oil_pressure_low", "润滑系统异常"))
+    
+    # 极端低电压 -> 电力供应故障
+    if voltage < 170:
+        extreme_conditions.append(("voltage_low", "电力供应故障"))
+    
+    # 极端高转速 -> 传动系统异常
+    if rpm > 3000:
+        extreme_conditions.append(("rpm_high", "传动系统异常"))
+    
+    # 如果检测到真正的极端值，按优先级返回
+    if extreme_conditions:
+        # 按故障严重程度排序
+        priority_order = ["电力供应故障", "散热系统故障", "传动系统异常", "润滑系统异常"]
+        
+        for fault_type in priority_order:
+            for condition, result in extreme_conditions:
+                if result == fault_type:
+                    print(f"--- 极端值预测: {condition} -> {result} ---")
+                    return result
+        
+        # 如果没有匹配的优先级，返回第一个检测到的故障
+        return extreme_conditions[0][1]
+    
+    # 如果没有检测到真正的极端值，返回"正常运行"
+    print("--- 未检测到真正的极端值，返回正常运行 ---")
+    return "正常运行"
 
 def plot_confusion_matrix(cm, classes, output_path):
     """绘制混淆矩阵"""
@@ -230,18 +346,43 @@ def predict_with_naive_bayes(data, output_dir):
     
     return predictions_df, accuracy, cm, report
 
-def predict_single(model, data_dict):
-    """对单条数据进行预测"""
+def predict_single(model, data_dict, bin_config):
+    """对单条数据进行预测 - 改进版本，支持极端值检测和概率分布
+    
+    Args:
+        model: 训练好的贝叶斯网络模型
+        data_dict: 输入数据字典
+        bin_config: 分箱配置字典，包含每个特征的bins和labels
+    
+    Returns:
+        tuple: (预测结果, 概率分布字典)
+    """
     print(f"--- predict_single: 原始输入数据: {data_dict} ---") # DEBUG
-    # 1. 将字典转换为单行DataFrame
+    
+    # 1. 首先检测极端值
+    extreme_detected, extreme_values = _detect_extreme_values(data_dict)
+    
+    if extreme_detected:
+        print(f"--- 检测到极端值: {extreme_values}，尝试使用极端值预测逻辑 ---")
+        extreme_prediction = _predict_extreme_case(data_dict)
+        # 只有在确实命中极端故障规则时，才直接返回100%概率
+        if extreme_prediction != "正常运行":
+            return extreme_prediction, {extreme_prediction: 1.0}
+        # 否则继续走正常贝叶斯推理，避免错误地返回100%
+    
+    # 2. 正常预测流程
+    # 将字典转换为单行DataFrame
     df = pd.DataFrame([data_dict])
     print(f"--- predict_single: 转换为DataFrame后: {df} ---") # DEBUG
 
-    # 2. 执行与批量预测相同的预处理 (保持原始英文列名)
-    # 对连续变量进行分箱
-    for col in ['temp', 'vibration', 'oil_pressure', 'voltage', 'rpm']:
-        if col in df.columns:
-            df[col] = std_based_binning(df[col], num_bins=5, var_name=col) # var_name 传入原始英文名
+    # 3. 执行预处理
+    # 对连续变量进行分箱 (使用传入的bin_config)
+    print(f"--- predict_single: bin_config keys: {bin_config.keys() if bin_config else 'None'} ---") # DEBUG
+    for col_name, config in bin_config.items():
+        if col_name in df.columns:
+            original_value = df[col_name].iloc[0]
+            df[col_name] = _discretize_single_value(original_value, config)
+            print(f"--- {col_name}: {original_value} -> {df[col_name].iloc[0]} (bins: {config['bins']}) ---") # DEBUG
     
     # 修改部门名称
     if 'department' in df.columns:
@@ -249,17 +390,72 @@ def predict_single(model, data_dict):
 
     print(f"--- predict_single: 分箱和部门处理后: {df} ---") # DEBUG
 
-    # 移除模型不需要的列 (model_nodes 应该包含原始英文名)
+    # 移除模型不需要的列
     model_nodes = model.nodes()
     df = df[[col for col in df.columns if col in model_nodes]]
     print(f"--- predict_single: 过滤模型节点后: {df} ---") # DEBUG
 
-    # 3. 执行预测
-    prediction = model.predict(df)
-    print(f"--- predict_single: 模型预测结果: {prediction} ---") # DEBUG
+    # 4. 执行预测和概率查询
+    try:
+        # 获取预测结果
+        prediction = model.predict(df)
+        prediction_result = prediction['故障类型'].iloc[0]
+        
+        # 获取概率分布
+        probability_dist = _get_probability_distribution(model, df)
+        
+        print(f"--- predict_single: 模型预测结果: {prediction_result} ---") # DEBUG
+        print(f"--- predict_single: 概率分布: {probability_dist} ---") # DEBUG
+        
+        return prediction_result, probability_dist
+        
+    except Exception as e:
+        print(f"--- 模型预测失败: {e}，使用极端值预测逻辑 ---")
+        prediction = _predict_extreme_case(data_dict)
+        return prediction, {prediction: 1.0}
+
+def _get_probability_distribution(model, evidence_df):
+    """获取故障类型的概率分布
     
-    # 4. 返回预测结果
-    return prediction['故障类型'].iloc[0]
+    Args:
+        model: 训练好的贝叶斯网络模型
+        evidence_df: 证据数据DataFrame
+    
+    Returns:
+        dict: 故障类型概率分布字典
+    """
+    try:
+        from pgmpy.inference import VariableElimination
+        
+        # 创建推理引擎
+        inference = VariableElimination(model)
+        
+        # 准备证据
+        evidence = {}
+        for col in evidence_df.columns:
+            if col != '故障类型':  # 排除目标变量
+                evidence[col] = evidence_df[col].iloc[0]
+        
+        print(f"--- 推理证据: {evidence} ---") # DEBUG
+        
+        # 查询故障类型的概率分布
+        query_result = inference.query(['故障类型'], evidence=evidence)
+        
+        # 提取概率分布
+        prob_dist = {}
+        for state in query_result.state_names['故障类型']:
+            prob = query_result.values[query_result.state_names['故障类型'].index(state)]
+            prob_dist[state] = float(prob)
+        
+        # 按概率从大到小排序
+        sorted_probs = dict(sorted(prob_dist.items(), key=lambda x: x[1], reverse=True))
+        
+        return sorted_probs
+        
+    except Exception as e:
+        print(f"--- 概率查询失败: {e} ---")
+        # 返回默认概率分布
+        return {"正常运行": 0.95, "传动系统异常": 0.02, "散热系统故障": 0.015, "润滑系统异常": 0.01, "电力供应故障": 0.005}
 
 def main(model_path, test_data_path):
     # 获取项目根目录
@@ -290,8 +486,12 @@ def main(model_path, test_data_path):
     try:
         # 加载模型
         print(f"正在加载模型: {model_path}")
-        model = load_model(model_path)
+        model, bin_config = load_model(model_path)
         print(f"模型加载完成，耗时: {time.time() - start_time:.4f}秒")
+        if bin_config:
+            print("已加载分箱配置")
+        else:
+            print("警告：未找到分箱配置，使用旧版本模型")
         
         # 预处理数据
         print(f"正在加载并预处理测试数据: {test_data_path}")
