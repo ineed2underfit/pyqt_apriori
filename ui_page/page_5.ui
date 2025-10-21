@@ -17,7 +17,7 @@
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout">
      <item>
-      <widget class="QComboBox" name="comboBox_2">
+      <widget class="QComboBox" name="comboBox">
        <property name="minimumSize">
         <size>
          <width>0</width>
@@ -77,10 +77,460 @@
          <string>DEV-010</string>
         </property>
        </item>
+       <item>
+        <property name="text">
+         <string>DEV-011</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-012</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-013</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-014</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-015</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-016</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-017</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-018</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-019</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-020</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-021</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-022</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-023</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-024</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-025</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-026</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-027</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-028</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-029</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-030</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-031</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-032</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-033</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-034</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-035</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-036</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-037</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-038</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-039</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-040</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-041</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-042</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-043</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-044</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-045</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-046</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-047</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-048</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-049</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-050</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-051</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-052</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-053</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-054</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-055</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-056</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-057</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-058</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-059</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-060</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-061</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-062</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-063</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-064</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-065</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-066</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-067</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-068</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-069</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-070</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-071</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-072</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-073</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-074</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-075</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-076</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-077</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-078</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-079</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-080</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-081</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-082</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-083</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-084</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-085</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-086</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-087</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-088</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-089</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-090</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-091</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-092</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-093</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-094</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-095</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-096</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-097</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-098</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-099</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>DEV-100</string>
+        </property>
+       </item>
       </widget>
      </item>
      <item>
-      <widget class="QPushButton" name="pushButton_2">
+      <widget class="QPushButton" name="pushButton">
        <property name="minimumSize">
         <size>
          <width>0</width>

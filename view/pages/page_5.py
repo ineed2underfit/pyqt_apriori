@@ -21,9 +21,7 @@ class Page5(QWidget, Ui_page_5):
 
     def bind_event(self):
         # View 将按钮点击事件委托给 Handler
-        self.pushButton_2.clicked.connect(self.handler.select_file) # 绑定事件
-        # self.pushButton_7.clicked.connect(self.handler.show_case_lib_popout) # 绑定事件
-        # self.pushButton_n.clicked.connect(self.handler.show_question_lib_confirm_dialog) # 绑定事件
+        self.pushButton.clicked.connect(self.handler.query_fault_records) # 查询设备故障记录
 
     def show_state_tooltip(self, title, content):
         self.loading_bar = ProgressInfoBar(title, content, self)
