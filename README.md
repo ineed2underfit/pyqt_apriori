@@ -1,0 +1,2 @@
+# pyqt_apriori
+运用了Apriori算法和贝叶斯网络构建的软件界面
