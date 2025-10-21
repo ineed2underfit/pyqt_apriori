@@ -1,214 +1,123 @@
-from PySide6.QtCore import QObject
-from PySide6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QWidget
-
-from api.api import demo_api
-from common.utils import show_dialog
-from workers.TaskManager import task_manager
+from PySide6.QtCore import QObject, QThread, Signal, Qt
 from PySide6.QtWidgets import QFileDialog
+from common.utils import show_dialog
+from workers.prediction_worker import PredictionWorker
 import os
 
-
-class ConfirmDialog(QDialog):
-    """确认对话框类"""
-
-    def __init__(self, parent=None, title="确认", message=""):
-        super().__init__(parent)
-        self.setWindowTitle(title)
-        self.setFixedSize(300, 120)
-        self.setModal(True)  # 设置为模态对话框
-
-        # 设置布局
-        layout = QVBoxLayout()
-
-        # 添加消息标签
-        self.message_label = QLabel(message)
-        self.message_label.setWordWrap(True)
-        layout.addWidget(self.message_label)
-
-        # 创建按钮布局
-        button_layout = QHBoxLayout()
-
-        # 创建接受和拒绝按钮
-        self.accept_button = QPushButton("接受(y)")
-        self.reject_button = QPushButton("拒绝(n)")
-
-        # 设置按钮样式（可选，让它们看起来更好看）
-        button_style = """
-            QPushButton {
-                padding: 4px 6px;
-                border: 1px solid #ccc;
-                border-radius: 4px;
-                background-color: #f0f0f0;
-                min-width: 8px;  /* 设置最小宽度 */
-            }
-            QPushButton:hover {
-                background-color: #e0e0e0;
-            }
-            QPushButton:pressed {
-                background-color: #d0d0d0;
-            }
-        """
-        self.accept_button.setStyleSheet(button_style)
-        self.reject_button.setStyleSheet(button_style)
-
-        # 连接按钮信号
-        self.accept_button.clicked.connect(self.accept)
-        self.reject_button.clicked.connect(self.reject)
-
-        # 添加按钮到布局
-        button_layout.addWidget(self.accept_button)
-        button_layout.addWidget(self.reject_button)
-
-        layout.addLayout(button_layout)
-        self.setLayout(layout)
-
-class Page4Handler(QObject):
+class PageFourHandler(QObject):
     def __init__(self, parent: 'Page4'):
         super().__init__(parent)
-        # Handler 通过 parent 参数持有 View 引用
         self._parent = parent
+        self.test_data_path = None
+        self.thread = None
+        self.worker = None
 
-    def do_something(self):
-        pass
-        show_dialog(self._parent, 'do something')
-
-    def do_something_async(self):
-        self._parent.show_state_tooltip('正在加载', '请稍后...')
+    # --- 批量评估功能 ---
+    def select_test_file(self):
+        """打开文件对话框，让用户选择测试数据集"""
         try:
-            task_manager.submit_task(
-                demo_api.sleep, args=(2,),
-                on_success=self.on_do_something_async_success,
-                on_error=lambda msg: self._parent.on_common_error(msg)
+            project_root = os.getcwd()
+            default_dir = os.path.join(project_root, "new_bayesian", "dataset", "testdata_info")
+            file_path, _ = QFileDialog.getOpenFileName(
+                self._parent, "选择测试数据文件", default_dir, "CSV Files (*.csv);;All Files (*.*)"
             )
-        except RuntimeError as e:
-            self._parent.close_state_tooltip()
-            self._parent.on_common_error(str(e))
-
-    def on_do_something_async_success(self, result):
-        self._parent.close_state_tooltip()
-        show_dialog(self._parent, 'do something async success')
-
-    def select_file(self):
-        """选择文件的方法"""
-        try:
-            # 打开文件选择对话框
-            file_path, file_type = QFileDialog.getOpenFileName(
-                self._parent,  # 父窗口
-                "选择数据文件",  # 对话框标题
-                "",  # 默认路径（空字符串表示当前目录）
-                "所有支持的文件 (*.txt *.csv *.xlsx *.json);;文本文件 (*.txt);;CSV文件 (*.csv);;Excel文件 (*.xlsx);;JSON文件 (*.json);;所有文件 (*.*)"
-                # 文件类型过滤器
-            )
-
-            # 如果用户选择了文件（没有取消）
             if file_path:
-                self.handle_selected_file(file_path)
-            else:
-                show_dialog(self._parent, '未选择任何文件', '提示')
-
+                self.test_data_path = file_path
+                self._parent.textEdit_3.setText(f"已选择测试文件进行批量评估：\n{file_path}")
+                self._parent.pushButton_assessment.setEnabled(True)
         except Exception as e:
             show_dialog(self._parent, f'文件选择出错: {str(e)}', '错误')
 
-    def handle_selected_file(self, file_path):
-        """处理选中的文件"""
+    def start_batch_assessment(self):
+        """开始批量质量评估预测"""
+        if not self.test_data_path:
+            show_dialog(self._parent, "请先导入测试数据集！", "错误")
+            return
+        self._run_prediction(self.test_data_path)
+
+    # --- 单次评估功能 ---
+    def assess_single_instance(self):
+        """对UI界面上输入的数据进行单次评估"""
+        print("--- assess_single_instance 方法被调用 ---") # DEBUG
         try:
-            # 获取文件信息
-            file_name = os.path.basename(file_path)
-            file_size = os.path.getsize(file_path)
-
-            # 这里可以根据你的需求处理文件
-            # 例如：读取文件内容、验证文件格式、显示文件信息等
-
-            message = f'已选择文件:\n文件名: {file_name}\n文件路径: {file_path}\n文件大小: {file_size} 字节'
-            show_dialog(self._parent, message, '文件选择成功')
-
-            # 如果需要异步处理文件，可以这样做：
-            # self.process_file_async(file_path)
-
+            # 从UI收集数据并打包成字典
+            data_dict = {
+                'timestamp': self._parent.dateTimeEdit.dateTime().toString(Qt.DateFormat.ISODate),
+                'device_id': self._parent.comboBox_model.currentText(),
+                'department': self._parent.comboBox_apt.currentText(),
+                'temp': self._parent.doubleSpinBox_temp.value(),
+                'vibration': self._parent.doubleSpinBox_vibration.value(),
+                'oil_pressure': self._parent.doubleSpinBox_oil.value(),
+                'voltage': self._parent.doubleSpinBox_voltage.value(),
+                'rpm': self._parent.doubleSpinBox_rpm.value()
+            }
+            print(f"--- 收集到的单次评估数据: {data_dict} ---") # DEBUG
+            self._run_prediction(data_dict)
         except Exception as e:
-            show_dialog(self._parent, f'处理文件时出错: {str(e)}', '错误')
+            print(f"--- assess_single_instance 发生错误: {e} ---") # DEBUG
+            show_dialog(self._parent, f'读取界面数据时出错: {str(e)}', '错误')
 
-    def process_file_async(self, file_path):
-        """异步处理文件的方法（如果需要的话）"""
-        self._parent.show_state_tooltip('正在处理文件', '请稍后...')
-        try:
-            task_manager.submit_task(
-                self.read_file_content, args=(file_path,),
-                on_success=self.on_file_process_success,
-                on_error=lambda msg: self._parent.on_common_error(msg)
-            )
-        except RuntimeError as e:
-            self._parent.close_state_tooltip()
-            self._parent.on_common_error(str(e))
+    # --- 公共的执行和回调逻辑 ---
+    def _run_prediction(self, data_payload):
+        """通用的预测执行函数，根据传入数据类型启动不同模式"""
+        print("--- _run_prediction 方法被调用 ---") # DEBUG
+        main_window = self._parent.window()
+        model_path = main_window.model_pkl_path
 
-    def read_file_content(self, file_path):
-        """读取文件内容（在后台线程中执行）"""
-        # 这里添加你的文件读取逻辑
-        # 例如读取 CSV、Excel、JSON 等
-        with open(file_path, 'r', encoding='utf-8') as f:
-            content = f.read()
-        return content
+        if not os.path.exists(model_path):
+            show_dialog(self._parent, f"模型文件不存在，请先在Page3中构建贝叶斯网络。\n路径: {model_path}", "错误")
+            return
 
-    def on_file_process_success(self, result):
-        """文件处理成功的回调"""
-        self._parent.close_state_tooltip()
-        show_dialog(self._parent, '文件处理完成', '成功')
+        # 禁用所有按钮
+        self._parent.pushButton_import.setEnabled(False)
+        self._parent.pushButton_assessment.setEnabled(False)
+        self._parent.pushButton_solely.setEnabled(False)
+        show_dialog(self._parent, "正在进行预测...", "请稍候")
 
-    def show_case_lib_popout(self):
-        # 在这里处理你的案例分割逻辑，之后弹窗显示统计信息
+        self.thread = QThread()
+        self.worker = PredictionWorker(model_path, data_payload)
+        self.worker.moveToThread(self.thread)
 
-        message = (
-            " 案例1 已添加到案例库\n"
-            "最终案例库案例数量: 158"
-        )
-        show_dialog(self._parent, message, "添加成功")
+        self.thread.started.connect(self.worker.run)
+        self.worker.batch_finished.connect(self.on_batch_assessment_finished)
+        self.worker.single_prediction_finished.connect(self.on_single_assessment_finished)
+        self.worker.error.connect(self.on_assessment_error)
+        self.thread.finished.connect(self.thread.deleteLater)
 
-    def show_question_lib_confirm_dialog(self):
-        """显示确认对话框，询问是否将案例添加到问题库"""
-        confirm_dialog = ConfirmDialog(
-            parent=self._parent,
-            title="确认操作",
-            message="是否将 案例1 添加到问题库? (y/n)"
-        )
+        self.thread.start()
 
-        # 显示对话框并获取结果
-        result = confirm_dialog.exec()
+    def on_batch_assessment_finished(self, report_text):
+        """批量评估成功的回调"""
+        self._parent.textEdit_3.setText(report_text)
+        show_dialog(self._parent, "质量评估完成！", "成功")
+        self.cleanup_thread()
 
-        if result == QDialog.DialogCode.Accepted:
-            # 用户点击了接受按钮，执行添加到问题库的操作
-            self.show_question_lib_popout()
-        # 如果用户点击拒绝按钮或关闭对话框，什么都不做，对话框会自动关闭
+    def on_single_assessment_finished(self, prediction_result, input_data_dict):
+        """单次评估成功的回调"""
+        output = "--- 单次故障概率评估结果 ---\n\n"
+        output += "输入数据：\n"
+        for key, value in input_data_dict.items():
+            output += f"  {key}: {value}\n"
+        output += f"\n预测故障类型为: {prediction_result}\n"
+        output += "-----------------------------------"
 
-    def show_question_lib_popout(self):
-        # 在这里处理你的案例分割逻辑，之后弹窗显示统计信息
+        self._parent.textEdit_solely.setText(output)
+        self.cleanup_thread()
+    def on_assessment_error(self, error_message):
+        """评估失败的通用回调"""
+        show_dialog(self._parent, f"评估失败: {error_message}", "错误")
+        self.cleanup_thread()
 
-        message = (
-            " 案例1 已保存到：E:\PycharmProjects\oygq_new\deepseek\data\problem_library\case_1.txt\n"
-            "案例1 已添加到问题库"
-        )
-        show_dialog(self._parent, message, "添加成功")
-
-    # def handle_reject_button_click(self):
-    #     """处理拒绝按钮点击事件，弹出确认对话框"""
-    #     # 创建消息框
-    #     msg_box = QMessageBox(self._parent)
-    #     msg_box.setWindowTitle("确认操作")
-    #     msg_box.setText("是否将 案例1 添加到问题库?")
-    #     msg_box.setIcon(QMessageBox.Icon.Question)
-    #
-    #     # 添加自定义按钮
-    #     accept_button = msg_box.addButton("接受", QMessageBox.ButtonRole.AcceptRole)
-    #     reject_button = msg_box.addButton("拒绝", QMessageBox.ButtonRole.RejectRole)
-    #
-    #     # 显示对话框并获取用户选择
-    #     msg_box.exec()
-    #
-    #     # 根据用户点击的按钮执行相应操作
-    #     if msg_box.clickedButton() == accept_button:
-    #         # 用户点击了接受按钮，执行 show_question_lib_popout 函数
-    #         self.show_question_lib_popout()
-    #     elif msg_box.clickedButton() == reject_button:
-    #         # 用户点击了拒绝按钮，直接关闭对话框（什么都不做）
-    #         pass
-
-
+    def cleanup_thread(self):
+        """清理线程"""
+        if self.thread and self.thread.isRunning():
+            self.thread.quit()
+            self.thread.wait()
+        self.thread = None
+        self.worker = None
+        if self._parent:
+            self._parent.pushButton_import.setEnabled(True)
+            # 只有在选择了测试文件后，才重新启用批量评估按钮
+            if self.test_data_path:
+                self._parent.pushButton_assessment.setEnabled(True)
+            self._parent.pushButton_solely.setEnabled(True)

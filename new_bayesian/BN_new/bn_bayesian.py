@@ -194,8 +194,8 @@ class BayesianNetworkBayesian:
         try:
             model_path = os.path.join('new_bayesian/pkl', 'bn_bayesian_model.pkl')
             with open(model_path, 'wb') as f:
-                pickle.dump(self.model, f)
-            print(f"模型已保存至: {model_path}")
+                pickle.dump((self.model, self.bin_config), f) # 保存模型和分箱配置
+            print(f"模型和分箱配置已保存至: {model_path}")
             return True
         except Exception as e:
             print(f"模型保存错误: {e}")

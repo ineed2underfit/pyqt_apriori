@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>816</width>
-    <height>738</height>
+    <width>576</width>
+    <height>632</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -26,7 +26,7 @@
          <item>
           <layout class="QHBoxLayout" name="horizontalLayout">
            <item>
-            <widget class="QPushButton" name="pushButton_6">
+            <widget class="QPushButton" name="pushButton_import">
              <property name="minimumSize">
               <size>
                <width>0</width>
@@ -45,7 +45,7 @@
             </widget>
            </item>
            <item>
-            <widget class="QPushButton" name="pushButton_8">
+            <widget class="QPushButton" name="pushButton_assessment">
              <property name="minimumSize">
               <size>
                <width>0</width>
@@ -90,8 +90,8 @@
           <property name="geometry">
            <rect>
             <x>0</x>
-            <y>0</y>
-            <width>777</width>
+            <y>-78</y>
+            <width>537</width>
             <height>444</height>
            </rect>
           </property>
@@ -139,7 +139,7 @@
               </widget>
              </item>
              <item>
-              <widget class="QComboBox" name="comboBox_2">
+              <widget class="QComboBox" name="comboBox_model">
                <property name="minimumSize">
                 <size>
                  <width>0</width>
@@ -209,7 +209,7 @@
               </widget>
              </item>
              <item>
-              <widget class="QComboBox" name="comboBox">
+              <widget class="QComboBox" name="comboBox_apt">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
                  <horstretch>0</horstretch>
@@ -267,7 +267,7 @@
               </widget>
              </item>
              <item>
-              <widget class="QDoubleSpinBox" name="doubleSpinBox_3">
+              <widget class="QDoubleSpinBox" name="doubleSpinBox_temp">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
                  <horstretch>0</horstretch>
@@ -282,6 +282,9 @@
                </property>
                <property name="decimals">
                 <number>4</number>
+               </property>
+               <property name="maximum">
+                <double>299.990000000000009</double>
                </property>
                <property name="singleStep">
                 <double>0.000200000000000</double>
@@ -299,7 +302,7 @@
               </widget>
              </item>
              <item>
-              <widget class="QDoubleSpinBox" name="doubleSpinBox_2">
+              <widget class="QDoubleSpinBox" name="doubleSpinBox_vibration">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
                  <horstretch>0</horstretch>
@@ -334,7 +337,7 @@
               </widget>
              </item>
              <item>
-              <widget class="QDoubleSpinBox" name="doubleSpinBox_6">
+              <widget class="QDoubleSpinBox" name="doubleSpinBox_oil">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
                  <horstretch>0</horstretch>
@@ -369,7 +372,7 @@
               </widget>
              </item>
              <item>
-              <widget class="QDoubleSpinBox" name="doubleSpinBox_4">
+              <widget class="QDoubleSpinBox" name="doubleSpinBox_voltage">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
                  <horstretch>0</horstretch>
@@ -386,7 +389,7 @@
                 <number>4</number>
                </property>
                <property name="maximum">
-                <double>380.000000000000000</double>
+                <double>500.000000000000000</double>
                </property>
                <property name="singleStep">
                 <double>0.000200000000000</double>
@@ -404,7 +407,7 @@
               </widget>
              </item>
              <item>
-              <widget class="QDoubleSpinBox" name="doubleSpinBox_5">
+              <widget class="QDoubleSpinBox" name="doubleSpinBox_rpm">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
                  <horstretch>0</horstretch>
@@ -421,7 +424,7 @@
                 <number>4</number>
                </property>
                <property name="maximum">
-                <double>5000.000000000000000</double>
+                <double>6999.000000000000000</double>
                </property>
                <property name="singleStep">
                 <double>0.000200000000000</double>
@@ -451,7 +454,7 @@
              <item>
               <layout class="QVBoxLayout" name="verticalLayout_4">
                <item>
-                <widget class="QPushButton" name="pushButton_7">
+                <widget class="QPushButton" name="pushButton_solely">
                  <property name="sizePolicy">
                   <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
                    <horstretch>0</horstretch>
@@ -478,7 +481,7 @@
               </layout>
              </item>
              <item>
-              <widget class="QTextEdit" name="textEdit">
+              <widget class="QTextEdit" name="textEdit_solely">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
                  <horstretch>0</horstretch>
@@ -486,9 +489,7 @@
                 </sizepolicy>
                </property>
                <property name="markdown">
-                <string>撸管
-
-</string>
+                <string/>
                </property>
               </widget>
              </item>

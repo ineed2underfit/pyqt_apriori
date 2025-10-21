@@ -230,15 +230,42 @@ def predict_with_naive_bayes(data, output_dir):
     
     return predictions_df, accuracy, cm, report
 
-def main():
+def predict_single(model, data_dict):
+    """对单条数据进行预测"""
+    print(f"--- predict_single: 原始输入数据: {data_dict} ---") # DEBUG
+    # 1. 将字典转换为单行DataFrame
+    df = pd.DataFrame([data_dict])
+    print(f"--- predict_single: 转换为DataFrame后: {df} ---") # DEBUG
+
+    # 2. 执行与批量预测相同的预处理 (保持原始英文列名)
+    # 对连续变量进行分箱
+    for col in ['temp', 'vibration', 'oil_pressure', 'voltage', 'rpm']:
+        if col in df.columns:
+            df[col] = std_based_binning(df[col], num_bins=5, var_name=col) # var_name 传入原始英文名
+    
+    # 修改部门名称
+    if 'department' in df.columns:
+        df['department'] = '部门_' + df['department']
+
+    print(f"--- predict_single: 分箱和部门处理后: {df} ---") # DEBUG
+
+    # 移除模型不需要的列 (model_nodes 应该包含原始英文名)
+    model_nodes = model.nodes()
+    df = df[[col for col in df.columns if col in model_nodes]]
+    print(f"--- predict_single: 过滤模型节点后: {df} ---") # DEBUG
+
+    # 3. 执行预测
+    prediction = model.predict(df)
+    print(f"--- predict_single: 模型预测结果: {prediction} ---") # DEBUG
+    
+    # 4. 返回预测结果
+    return prediction['故障类型'].iloc[0]
+
+def main(model_path, test_data_path):
     # 获取项目根目录
     root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    
-    # 设置路径
-    model_path = os.path.join(root_dir, 'pkl', 'bn_bayesian_model.pkl')
-    test_data_path = os.path.join(root_dir, 'dataset', 'testdata_info', 'training_dataset.csv')
     output_dir = os.path.join(root_dir, 'predict', 'results')
-    
+
     # 检查模型文件是否存在且非空
     if not os.path.exists(model_path):
         print(f"错误：模型文件不存在: {model_path}")
@@ -296,4 +323,8 @@ def main():
         return
 
 if __name__ == "__main__":
-    main() 
+    # 定义默认路径用于独立测试
+    root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    model_path = os.path.join(root_dir, 'pkl', 'bn_bayesian_model.pkl')
+    test_data_path = os.path.join(root_dir, 'dataset', 'testdata_info', 'training_dataset.csv')
+    main(model_path, test_data_path)
