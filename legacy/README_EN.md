@@ -4,11 +4,11 @@
 
 <div align="center">
 
-[中文](./README.md) | **English**
+[中文](README.md) | **English**
 
 [![Python 3.8+](https://img.shields.io/badge/Python-3.8%2B-blue?color=#4ec820)]()
 [![PySide6 6.7.0](https://img.shields.io/badge/PySide6-6.7.0-green?color=#4ec820)]()
-[![GPLv3](https://img.shields.io/badge/License-GPLv3-blue?color=#4ec820)](LICENSE)
+[![GPLv3](https://img.shields.io/badge/License-GPLv3-blue?color=#4ec820)](../LICENSE)
 [![Platform Win32 | Linux | macOS](https://img.shields.io/badge/Platform-Win32%20|%20Linux%20|%20macOS-blue?color=#4ec820)]()
 
 </div>
