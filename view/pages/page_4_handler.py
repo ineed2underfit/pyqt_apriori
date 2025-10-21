@@ -212,10 +212,14 @@ class PageFourHandler(QObject):
             
             # 概率条
             bar_width = prob * 100
+            
+            # 格式化概率显示：统一显示8位小数，不使用科学计数法
+            prob_text = f'{prob * 100:.8f}%'
+            
             output += f'<div style="margin-bottom: 6px;">'
             output += f'<div style="display: flex; align-items: center; margin-bottom: 3px;">'
             output += f'<span style="font-size: 9pt; color: #2c3e50; width: 120px; display: inline-block;">{fault_type}</span>'
-            output += f'<span style="font-size: 9pt; color: #495057; margin-left: 8px; min-width: 40px;">{prob:.1%}</span>'
+            output += f'<span style="font-size: 9pt; color: #495057; margin-left: 8px; min-width: 80px;">{prob_text}</span>'
             output += f'</div>'
             output += f'<div style="background-color: #e9ecef; height: 8px; border-radius: 4px; overflow: hidden;">'
             output += f'<div style="background-color: {bar_color}; height: 100%; width: {bar_width}%; transition: width 0.3s ease;"></div>'
