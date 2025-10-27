@@ -1,6 +1,6 @@
 import sys
 
-from PySide6.QtCore import Qt, QTranslator
+from PySide6.QtCore import Qt, QTranslator, QLocale
 from PySide6.QtGui import QFont, QIcon
 from PySide6.QtWidgets import QApplication
 
@@ -16,9 +16,14 @@ def main():
     # 适配缩放比例
     QApplication.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
     app = QApplication(sys.argv)
+    
     # 设置应用程序图标
     icon = QIcon(":/resource/images/army_icon.png")
     app.setWindowIcon(icon)
+
+    # 解决不同地区数字格式问题 (例如 逗号/点 作为小数点)
+    # 强制使用 'C' locale (POSIX/standard)
+    QLocale.setDefault(QLocale.C)
 
     font = app.font()
     font.setHintingPreference(QFont.HintingPreference.PreferNoHinting)
