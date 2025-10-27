@@ -4,7 +4,9 @@ import os
 import pandas as pd
 
 # 将脚本所在的目录添加到 sys.path 以便导入
-sys.path.append(os.path.abspath("E:/pycharm_projects/pyqt/pyqt-fluent-widgets-template/pyqt_apriori/new_bayesian/predict"))
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+predict_path = os.path.join(project_root, "new_bayesian", "predict")
+sys.path.append(os.path.abspath(predict_path))
 from predict import main as run_batch_prediction, predict_single, load_model
 
 class PredictionWorker(QObject):

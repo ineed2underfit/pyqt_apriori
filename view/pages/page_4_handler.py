@@ -196,6 +196,40 @@ class PageFourHandler(QObject):
         
         output += f'<p style="font-size: 12pt; font-weight: bold; color: {result_color}; margin-top: 15px; padding: 12px; background-color: {result_bg_color}; border-left: 5px solid {result_border_color}; border-radius: 5px;">{result_icon} 预测故障类型：<span style="color: {result_color}; font-size: 13pt;">{prediction_result}</span></p>'
         
+        # 故障处理建议
+        suggestions = {
+            "散热系统故障": [
+                "检查散热风扇是否运转正常或损坏。",
+                "清理或检查通风管道是否堵塞或漏气。"
+            ],
+            "润滑系统异常": [
+                "检查润滑油位是否不足或变质。",
+                "确认润滑泵及管路是否堵塞或泄漏。"
+            ],
+            "传动系统异常": [
+                "检查传动皮带、链条或齿轮是否磨损或松动。",
+                "确认对中是否偏移，轴承是否过热或异响。"
+            ],
+            "电力供应故障": [
+                "检查电源线路、接线端子是否松动或烧蚀。",
+                "测试电压是否稳定，排查断路器或保险是否跳闸/熔断。"
+            ],
+            "正常运行": [
+                "暂无建议/继续观察使用"
+            ]
+        }
+        
+        suggestion_list = suggestions.get(prediction_result, [])
+        
+        if suggestion_list:
+            output += '<div style="margin-top: 15px; padding: 12px; background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 5px;">'
+            output += '<p style="font-size: 10.5pt; font-weight: bold; color: #34495e; margin-bottom: 8px;">📝 故障处理建议：</p>'
+            output += '<ul style="margin-left: 20px; padding-left: 0;">'
+            for suggestion in suggestion_list:
+                output += f'<li style="font-size: 9.5pt; color: #2c3e50; margin-bottom: 5px;">{suggestion}</li>'
+            output += '</ul>'
+            output += '</div>'
+
         # 概率分布显示
         output += '<div style="margin-top: 15px;">'
         output += '<p style="font-size: 10.5pt; font-weight: bold; color: #34495e; margin-bottom: 8px;">📈 故障类型概率分布：</p>'

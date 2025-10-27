@@ -13,10 +13,15 @@ class PageOneHandler(QObject):
     def select_file(self):
         """选择文件的方法"""
         try:
+            # 获取项目根目录下的apriori文件夹作为默认路径
+            # page_one_handler.py -> pages -> view -> 项目根目录 (向上2级)
+            project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            default_path = os.path.join(project_root, "apriori")
+            
             file_path, _ = QFileDialog.getOpenFileName(
                 self._parent,
                 "选择数据文件",
-                "E:/pycharm_projects/pyqt/pyqt-fluent-widgets-template/pyqt_apriori/apriori",
+                default_path,
                 "CSV Files (*.csv);;All Files (*.*)"
             )
 

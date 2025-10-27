@@ -74,7 +74,9 @@ class PageTwoHandler(QObject):
             best_rules_df = get_best_rule_per_fault(optimal_rules, by='提升度')
 
             # 2. 保存优化后的规则到指定文件，为Page3做准备
-            save_path = "E:/pycharm_projects/pyqt/pyqt-fluent-widgets-template/pyqt_apriori/new_bayesian/dataset/optimal_rules.csv"
+            # page_two_handler.py -> pages -> view -> 项目根目录 (向上2级)
+            project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            save_path = os.path.join(project_root, "new_bayesian", "dataset", "optimal_rules.csv")
             os.makedirs(os.path.dirname(save_path), exist_ok=True)
             best_rules_df.to_csv(save_path, index=False, encoding='utf-8-sig')
 

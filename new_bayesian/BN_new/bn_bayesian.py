@@ -294,11 +294,15 @@ def run_analysis(data_path, rules_path, network_structure_save_path, confusion_m
                 bn.estimate_parameters(confusion_matrix_save_path, report_save_dir)
 
 if __name__ == "__main__":
-    base_dir = "E:/pycharm_projects/pyqt/pyqt-fluent-widgets-template/pyqt_apriori/new_bayesian/"
-    data_path = os.path.join(base_dir, "dataset/data_info/training_dataset.csv")
-    rules_path = os.path.join(base_dir, "dataset/optimal_rules.csv")
-    network_path = os.path.join(base_dir, "result/bayesian_result/network_structure.png")
-    cm_path = os.path.join(base_dir, "result/bayesian_result/confusion_matrix.png")
-    report_dir = os.path.join(base_dir, "result/bayesian_result")
+    # 获取项目根目录
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.dirname(os.path.dirname(os.path.dirname(script_dir)))
+    base_dir = os.path.join(project_root, "new_bayesian")
+    
+    data_path = os.path.join(base_dir, "dataset", "data_info", "training_dataset.csv")
+    rules_path = os.path.join(base_dir, "dataset", "optimal_rules.csv")
+    network_path = os.path.join(base_dir, "result", "bayesian_result", "network_structure.png")
+    cm_path = os.path.join(base_dir, "result", "bayesian_result", "confusion_matrix.png")
+    report_dir = os.path.join(base_dir, "result", "bayesian_result")
     os.makedirs(os.path.dirname(network_path), exist_ok=True)
     run_analysis(data_path, rules_path, network_path, cm_path, report_dir)

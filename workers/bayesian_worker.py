@@ -2,7 +2,9 @@ from PySide6.QtCore import QObject, Signal
 import sys
 import os
 
-sys.path.append(os.path.abspath("E:/pycharm_projects/pyqt/pyqt-fluent-widgets-template/pyqt_apriori/new_bayesian/BN_new"))
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+bn_path = os.path.join(project_root, "new_bayesian", "BN_new")
+sys.path.append(os.path.abspath(bn_path))
 from bn_bayesian import run_analysis
 
 class Stream(QObject):

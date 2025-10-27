@@ -1,7 +1,7 @@
 import sys
 
 from PySide6.QtCore import Qt, QTranslator
-from PySide6.QtGui import QFont
+from PySide6.QtGui import QFont, QIcon
 from PySide6.QtWidgets import QApplication
 
 from common.config import cfg
@@ -16,6 +16,10 @@ def main():
     # 适配缩放比例
     QApplication.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
     app = QApplication(sys.argv)
+    # 设置应用程序图标
+    icon = QIcon(":/resource/images/army_icon.png")
+    app.setWindowIcon(icon)
+
     font = app.font()
     font.setHintingPreference(QFont.HintingPreference.PreferNoHinting)
     app.setFont(font)

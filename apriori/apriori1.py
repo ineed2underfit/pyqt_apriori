@@ -443,7 +443,7 @@ if __name__ == "__main__":
     try:
         total_start_time = time.time()  # 记录总运行开始时间
         
-        # file_path = r'C:\Users\HP\Desktop\quality\pythonProject\training_dataset.csv'
+        # file_path = r'相对路径已使用，无需硬编码绝对路径'
         # 检查文件是否存在
         if not os.path.exists(file_path):
             print(f"错误: 文件 {file_path} 不存在，请检查路径")

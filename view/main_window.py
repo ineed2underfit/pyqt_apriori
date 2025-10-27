@@ -62,7 +62,7 @@ class MainWindow(FluentWindow):
         #
         #
         # # 背景图路径（建议使用相对路径）
-        # self.background_image = QPixmap(r"E:\PycharmProjects\pyqt_fluent_widgets\my_pyqt_fluent_testability\resource\images\China_army.jpg")
+        # self.background_image = QPixmap("resource/images/China_army.jpg")  # 使用相对路径
 
     # 注释掉背景相关方法
     # def _resizeEvent(self, event):
@@ -103,7 +103,7 @@ class MainWindow(FluentWindow):
 
     def init_window(self):
         if sys.platform != "darwin":
-            # self.setWindowIcon(QIcon(':/resource/images/army_icon.png'))
+            self.setWindowIcon(QIcon(':/resource/images/army_icon.png'))
             self.setWindowTitle('装备质量评估系统')
         self.resize(900, 700)
         self.move((self.screen().size().width() - self.width()) / 2,

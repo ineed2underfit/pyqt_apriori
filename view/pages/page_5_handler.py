@@ -353,8 +353,15 @@ class Page5Handler(QObject):
     def show_question_lib_popout(self):
         # 在这里处理你的案例分割逻辑，之后弹窗显示统计信息
 
+        # 使用项目相对路径保存案例
+        # page_5_handler.py -> pages -> view -> 项目根目录 (向上2级)
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        case_dir = os.path.join(project_root, "data", "problem_library")
+        os.makedirs(case_dir, exist_ok=True)
+        case_path = os.path.join(case_dir, "case_1.txt")
+        
         message = (
-            " 案例1 已保存到：E:\PycharmProjects\oygq_new\deepseek\data\problem_library\case_1.txt\n"
+            f" 案例1 已保存到：{case_path}\n"
             "案例1 已添加到问题库"
         )
         show_dialog(self._parent, message, "添加成功")
