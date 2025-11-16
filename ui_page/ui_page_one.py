@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'page_one.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.9.3
+## Created by: Qt User Interface Compiler version 6.7.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -35,10 +35,26 @@ class Ui_page_one(object):
         self.horizontalLayout.setObjectName(u"horizontalLayout")
         self.pushButton = QPushButton(page_one)
         self.pushButton.setObjectName(u"pushButton")
+        sizePolicy1 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        sizePolicy1.setHorizontalStretch(0)
+        sizePolicy1.setVerticalStretch(0)
+        sizePolicy1.setHeightForWidth(self.pushButton.sizePolicy().hasHeightForWidth())
+        self.pushButton.setSizePolicy(sizePolicy1)
         self.pushButton.setMinimumSize(QSize(0, 30))
         self.pushButton.setAutoDefault(True)
 
         self.horizontalLayout.addWidget(self.pushButton)
+
+        self.pushButton_clean = QPushButton(page_one)
+        self.pushButton_clean.setObjectName(u"pushButton_clean")
+        sizePolicy2 = QSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Fixed)
+        sizePolicy2.setHorizontalStretch(2)
+        sizePolicy2.setVerticalStretch(0)
+        sizePolicy2.setHeightForWidth(self.pushButton_clean.sizePolicy().hasHeightForWidth())
+        self.pushButton_clean.setSizePolicy(sizePolicy2)
+        self.pushButton_clean.setMinimumSize(QSize(200, 30))
+
+        self.horizontalLayout.addWidget(self.pushButton_clean)
 
 
         self.verticalLayout.addLayout(self.horizontalLayout)
@@ -52,7 +68,7 @@ class Ui_page_one(object):
 
         self.retranslateUi(page_one)
 
-        self.pushButton.setDefault(True)
+        self.pushButton.setDefault(False)
 
 
         QMetaObject.connectSlotsByName(page_one)
@@ -61,5 +77,6 @@ class Ui_page_one(object):
     def retranslateUi(self, page_one):
         page_one.setWindowTitle(QCoreApplication.translate("page_one", u"Form", None))
         self.pushButton.setText(QCoreApplication.translate("page_one", u"\u5bfc\u5165\u6570\u636e", None))
+        self.pushButton_clean.setText(QCoreApplication.translate("page_one", u"\u6570\u636e\u6e05\u6d17", None))
     # retranslateUi
 

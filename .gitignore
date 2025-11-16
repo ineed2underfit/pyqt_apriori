@@ -76,3 +76,17 @@ logs
 resource_rc.py
 ui_view/ui_login_window.py
 view/ui_main_window.py
+
+
+Bayesian_1130/result/apriori_results/*
+!Bayesian_1130/result/apriori_results/
+
+Bayesian_1130/result/bayesian_results/*
+!Bayesian_1130/result/bayesian_results/
+
+Bayesian_1130/datas/apriori_results/*
+!Bayesian_1130/datas/apriori_results/
+
+apriori/apriori_results/*
+!apriori/apriori_results/
+

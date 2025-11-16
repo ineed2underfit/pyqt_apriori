@@ -1,0 +1,741 @@
+{
+  "metadata": {
+    "created_time": "2025-11-15 15:39:27",
+    "export_version": "2.0",
+    "num_bins": 5,
+    "discretization_method": "kmeans",
+    "dataset_config": {
+      "numerical_cols": [
+        "temp",
+        "vibration",
+        "oil_pressure",
+        "voltage",
+        "rpm"
+      ],
+      "categorical_cols": [
+        "department"
+      ],
+      "target_col": "故障类型",
+      "id_cols": [
+        "timestamp",
+        "device_id"
+      ],
+      "normal_value": "正常运行",
+      "col_mapping": {},
+      "feature_names": {
+        "temp": "temp",
+        "vibration": "vibration",
+        "oil_pressure": "oil_pressure",
+        "voltage": "voltage",
+        "rpm": "rpm"
+      }
+    },
+    "rule_config": {
+      "rule_pattern": "prediction",
+      "target_in_consequent": true,
+      "target_in_antecedent": false,
+      "custom_filter": null,
+      "strict_target_consequent": false
+    },
+    "cleaning_report": {
+      "original_shape": [
+        3000,
+        9
+      ],
+      "cleaned_shape": [
+        3000,
+        9
+      ],
+      "rows_removed": 0,
+      "columns_removed": 0,
+      "cleaning_actions": [],
+      "data_quality_improvement": {
+        "missing_values_before": 0,
+        "missing_values_after": 0,
+        "duplicates_removed": 0,
+        "outliers_processed": 0
+      }
+    }
+  },
+  "data_info": {
+    "binning_info": {
+      "temp": {
+        "bins": [
+          35.0,
+          50.37728307756507,
+          59.70576455287342,
+          68.91959750711098,
+          83.72741919385797,
+          104.87
+        ],
+        "labels": [
+          "极低temp",
+          "低temp",
+          "中temp",
+          "高temp",
+          "极高temp"
+        ],
+        "ranges": [
+          {
+            "label": "极低temp",
+            "min": 35.0,
+            "max": 50.37728307756507,
+            "range_text": "35.00 - 50.38"
+          },
+          {
+            "label": "低temp",
+            "min": 50.37728307756507,
+            "max": 59.70576455287342,
+            "range_text": "50.38 - 59.71"
+          },
+          {
+            "label": "中temp",
+            "min": 59.70576455287342,
+            "max": 68.91959750711098,
+            "range_text": "59.71 - 68.92"
+          },
+          {
+            "label": "高temp",
+            "min": 68.91959750711098,
+            "max": 83.72741919385797,
+            "range_text": "68.92 - 83.73"
+          },
+          {
+            "label": "极高temp",
+            "min": 83.72741919385797,
+            "max": 104.87,
+            "range_text": "83.73 - 104.87"
+          }
+        ],
+        "feature_chinese_name": "temp",
+        "num_bins": 5
+      },
+      "vibration": {
+        "bins": [
+          0.0,
+          0.8585049120224896,
+          1.5996417645774519,
+          2.3684422118872,
+          3.296671152171701,
+          4.47
+        ],
+        "labels": [
+          "极低vibration",
+          "低vibration",
+          "中vibration",
+          "高vibration",
+          "极高vibration"
+        ],
+        "ranges": [
+          {
+            "label": "极低vibration",
+            "min": 0.0,
+            "max": 0.8585049120224896,
+            "range_text": "0.00 - 0.86"
+          },
+          {
+            "label": "低vibration",
+            "min": 0.8585049120224896,
+            "max": 1.5996417645774519,
+            "range_text": "0.86 - 1.60"
+          },
+          {
+            "label": "中vibration",
+            "min": 1.5996417645774519,
+            "max": 2.3684422118872,
+            "range_text": "1.60 - 2.37"
+          },
+          {
+            "label": "高vibration",
+            "min": 2.3684422118872,
+            "max": 3.296671152171701,
+            "range_text": "2.37 - 3.30"
+          },
+          {
+            "label": "极高vibration",
+            "min": 3.296671152171701,
+            "max": 4.47,
+            "range_text": "3.30 - 4.47"
+          }
+        ],
+        "feature_chinese_name": "vibration",
+        "num_bins": 5
+      },
+      "oil_pressure": {
+        "bins": [
+          1.06,
+          4.455479963570126,
+          7.6167131522903,
+          10.225160259898702,
+          12.764658871944814,
+          16.0
+        ],
+        "labels": [
+          "极低oil_pressure",
+          "低oil_pressure",
+          "中oil_pressure",
+          "高oil_pressure",
+          "极高oil_pressure"
+        ],
+        "ranges": [
+          {
+            "label": "极低oil_pressure",
+            "min": 1.06,
+            "max": 4.455479963570126,
+            "range_text": "1.06 - 4.46"
+          },
+          {
+            "label": "低oil_pressure",
+            "min": 4.455479963570126,
+            "max": 7.6167131522903,
+            "range_text": "4.46 - 7.62"
+          },
+          {
+            "label": "中oil_pressure",
+            "min": 7.6167131522903,
+            "max": 10.225160259898702,
+            "range_text": "7.62 - 10.23"
+          },
+          {
+            "label": "高oil_pressure",
+            "min": 10.225160259898702,
+            "max": 12.764658871944814,
+            "range_text": "10.23 - 12.76"
+          },
+          {
+            "label": "极高oil_pressure",
+            "min": 12.764658871944814,
+            "max": 16.0,
+            "range_text": "12.76 - 16.00"
+          }
+        ],
+        "feature_chinese_name": "oil_pressure",
+        "num_bins": 5
+      },
+      "voltage": {
+        "bins": [
+          160.01,
+          187.07574617340725,
+          206.15956952840511,
+          219.70852883480592,
+          233.1502242763819,
+          250.0
+        ],
+        "labels": [
+          "极低voltage",
+          "低voltage",
+          "中voltage",
+          "高voltage",
+          "极高voltage"
+        ],
+        "ranges": [
+          {
+            "label": "极低voltage",
+            "min": 160.01,
+            "max": 187.07574617340725,
+            "range_text": "160.01 - 187.08"
+          },
+          {
+            "label": "低voltage",
+            "min": 187.07574617340725,
+            "max": 206.15956952840511,
+            "range_text": "187.08 - 206.16"
+          },
+          {
+            "label": "中voltage",
+            "min": 206.15956952840511,
+            "max": 219.70852883480592,
+            "range_text": "206.16 - 219.71"
+          },
+          {
+            "label": "高voltage",
+            "min": 219.70852883480592,
+            "max": 233.1502242763819,
+            "range_text": "219.71 - 233.15"
+          },
+          {
+            "label": "极高voltage",
+            "min": 233.1502242763819,
+            "max": 250.0,
+            "range_text": "233.15 - 250.00"
+          }
+        ],
+        "feature_chinese_name": "voltage",
+        "num_bins": 5
+      },
+      "rpm": {
+        "bins": [
+          1500.0,
+          1774.8115189203113,
+          1986.368301499033,
+          2193.0868588715384,
+          2545.5478020694754,
+          2998.83
+        ],
+        "labels": [
+          "极低rpm",
+          "低rpm",
+          "中rpm",
+          "高rpm",
+          "极高rpm"
+        ],
+        "ranges": [
+          {
+            "label": "极低rpm",
+            "min": 1500.0,
+            "max": 1774.8115189203113,
+            "range_text": "1500.00 - 1774.81"
+          },
+          {
+            "label": "低rpm",
+            "min": 1774.8115189203113,
+            "max": 1986.368301499033,
+            "range_text": "1774.81 - 1986.37"
+          },
+          {
+            "label": "中rpm",
+            "min": 1986.368301499033,
+            "max": 2193.0868588715384,
+            "range_text": "1986.37 - 2193.09"
+          },
+          {
+            "label": "高rpm",
+            "min": 2193.0868588715384,
+            "max": 2545.5478020694754,
+            "range_text": "2193.09 - 2545.55"
+          },
+          {
+            "label": "极高rpm",
+            "min": 2545.5478020694754,
+            "max": 2998.83,
+            "range_text": "2545.55 - 2998.83"
+          }
+        ],
+        "feature_chinese_name": "rpm",
+        "num_bins": 5
+      }
+    },
+    "categorical_info": {
+      "department": {
+        "feature_name": "department",
+        "feature_type": "categorical",
+        "description": "分类特征: department",
+        "unique_values": [
+          "维修部",
+          "生产部",
+          "研发部",
+          "质检部"
+        ],
+        "value_counts": {
+          "维修部": 762,
+          "生产部": 757,
+          "研发部": 742,
+          "质检部": 739
+        },
+        "value_distribution": {
+          "维修部": {
+            "count": 762,
+            "percentage": 25.4
+          },
+          "生产部": {
+            "count": 757,
+            "percentage": 25.23
+          },
+          "研发部": {
+            "count": 742,
+            "percentage": 24.73
+          },
+          "质检部": {
+            "count": 739,
+            "percentage": 24.63
+          }
+        },
+        "total_unique": 4,
+        "most_frequent": "维修部",
+        "least_frequent": "质检部"
+      }
+    },
+    "target_info": {
+      "target_column": "故障类型",
+      "normal_value": "正常运行",
+      "feature_type": "target",
+      "description": "目标变量: 故障类型",
+      "unique_values": [
+        "正常运行",
+        "散热系统故障",
+        "电力供应故障",
+        "润滑系统异常",
+        "传动系统异常"
+      ],
+      "value_counts": {
+        "正常运行": 2400,
+        "散热系统故障": 150,
+        "电力供应故障": 150,
+        "润滑系统异常": 150,
+        "传动系统异常": 150
+      },
+      "value_distribution": {
+        "正常运行": {
+          "count": 2400,
+          "percentage": 80.0,
+          "type": "normal"
+        },
+        "散热系统故障": {
+          "count": 150,
+          "percentage": 5.0,
+          "type": "abnormal"
+        },
+        "电力供应故障": {
+          "count": 150,
+          "percentage": 5.0,
+          "type": "abnormal"
+        },
+        "润滑系统异常": {
+          "count": 150,
+          "percentage": 5.0,
+          "type": "abnormal"
+        },
+        "传动系统异常": {
+          "count": 150,
+          "percentage": 5.0,
+          "type": "abnormal"
+        }
+      },
+      "total_unique": 5,
+      "normal_ratio": 80.0,
+      "abnormal_ratio": 20.0,
+      "normal_count": 2400,
+      "abnormal_count": 600,
+      "abnormal_types": [
+        "散热系统故障",
+        "电力供应故障",
+        "润滑系统异常",
+        "传动系统异常"
+      ],
+      "class_balance": "imbalanced"
+    },
+    "normalized_data_info": {
+      "normalization_method": "discretization_binning",
+      "description": "通过分箱离散化进行数据归一化",
+      "features": {
+        "temp": {
+          "feature_name": "temp",
+          "feature_chinese_name": "temp",
+          "original_type": "numerical",
+          "normalized_type": "categorical_discrete",
+          "original_stats": {
+            "min": 35.0,
+            "max": 104.87,
+            "mean": 63.11006,
+            "std": 13.943151877935051,
+            "median": 61.144999999999996,
+            "q25": 53.7,
+            "q75": 70.035
+          },
+          "normalization_details": {
+            "method": "kmeans_binning",
+            "num_bins": 5,
+            "bin_labels": [
+              "极低temp",
+              "低temp",
+              "中temp",
+              "高temp",
+              "极高temp"
+            ],
+            "bin_boundaries": [
+              35.0,
+              50.37728307756507,
+              59.70576455287342,
+              68.91959750711098,
+              83.72741919385797,
+              104.87
+            ]
+          },
+          "normalized_distribution": {
+            "极低temp": {
+              "count": 498,
+              "percentage": 16.6
+            },
+            "低temp": {
+              "count": 851,
+              "percentage": 28.37
+            },
+            "中temp": {
+              "count": 832,
+              "percentage": 27.73
+            },
+            "高temp": {
+              "count": 519,
+              "percentage": 17.3
+            },
+            "极高temp": {
+              "count": 300,
+              "percentage": 10.0
+            }
+          }
+        },
+        "vibration": {
+          "feature_name": "vibration",
+          "feature_chinese_name": "vibration",
+          "original_type": "numerical",
+          "normalized_type": "categorical_discrete",
+          "original_stats": {
+            "min": 0.0,
+            "max": 4.47,
+            "mean": 1.6996933333333333,
+            "std": 0.9426336998287863,
+            "median": 1.61,
+            "q25": 1.03,
+            "q75": 2.26
+          },
+          "normalization_details": {
+            "method": "kmeans_binning",
+            "num_bins": 5,
+            "bin_labels": [
+              "极低vibration",
+              "低vibration",
+              "中vibration",
+              "高vibration",
+              "极高vibration"
+            ],
+            "bin_boundaries": [
+              0.0,
+              0.8585049120224896,
+              1.5996417645774519,
+              2.3684422118872,
+              3.296671152171701,
+              4.47
+            ]
+          },
+          "normalized_distribution": {
+            "极低vibration": {
+              "count": 569,
+              "percentage": 18.97
+            },
+            "低vibration": {
+              "count": 918,
+              "percentage": 30.6
+            },
+            "中vibration": {
+              "count": 852,
+              "percentage": 28.4
+            },
+            "高vibration": {
+              "count": 469,
+              "percentage": 15.63
+            },
+            "极高vibration": {
+              "count": 192,
+              "percentage": 6.4
+            }
+          }
+        },
+        "oil_pressure": {
+          "feature_name": "oil_pressure",
+          "feature_chinese_name": "oil_pressure",
+          "original_type": "numerical",
+          "normalized_type": "categorical_discrete",
+          "original_stats": {
+            "min": 1.06,
+            "max": 16.0,
+            "mean": 9.760403333333333,
+            "std": 3.103191626387084,
+            "median": 9.88,
+            "q25": 7.83,
+            "q75": 12.0025
+          },
+          "normalization_details": {
+            "method": "kmeans_binning",
+            "num_bins": 5,
+            "bin_labels": [
+              "极低oil_pressure",
+              "低oil_pressure",
+              "中oil_pressure",
+              "高oil_pressure",
+              "极高oil_pressure"
+            ],
+            "bin_boundaries": [
+              1.06,
+              4.455479963570126,
+              7.6167131522903,
+              10.225160259898702,
+              12.764658871944814,
+              16.0
+            ]
+          },
+          "normalized_distribution": {
+            "极低oil_pressure": {
+              "count": 150,
+              "percentage": 5.0
+            },
+            "低oil_pressure": {
+              "count": 549,
+              "percentage": 18.3
+            },
+            "中oil_pressure": {
+              "count": 915,
+              "percentage": 30.5
+            },
+            "高oil_pressure": {
+              "count": 862,
+              "percentage": 28.73
+            },
+            "极高oil_pressure": {
+              "count": 524,
+              "percentage": 17.47
+            }
+          }
+        },
+        "voltage": {
+          "feature_name": "voltage",
+          "feature_chinese_name": "voltage",
+          "original_type": "numerical",
+          "normalized_type": "categorical_discrete",
+          "original_stats": {
+            "min": 160.01,
+            "max": 250.0,
+            "mean": 216.97713000000002,
+            "std": 17.883474478306468,
+            "median": 218.78,
+            "q25": 206.89499999999998,
+            "q75": 229.62
+          },
+          "normalization_details": {
+            "method": "kmeans_binning",
+            "num_bins": 5,
+            "bin_labels": [
+              "极低voltage",
+              "低voltage",
+              "中voltage",
+              "高voltage",
+              "极高voltage"
+            ],
+            "bin_boundaries": [
+              160.01,
+              187.07574617340725,
+              206.15956952840511,
+              219.70852883480592,
+              233.1502242763819,
+              250.0
+            ]
+          },
+          "normalized_distribution": {
+            "极低voltage": {
+              "count": 197,
+              "percentage": 6.57
+            },
+            "低voltage": {
+              "count": 521,
+              "percentage": 17.37
+            },
+            "中voltage": {
+              "count": 856,
+              "percentage": 28.53
+            },
+            "高voltage": {
+              "count": 882,
+              "percentage": 29.4
+            },
+            "极高voltage": {
+              "count": 544,
+              "percentage": 18.13
+            }
+          }
+        },
+        "rpm": {
+          "feature_name": "rpm",
+          "feature_chinese_name": "rpm",
+          "original_type": "numerical",
+          "normalized_type": "categorical_discrete",
+          "original_stats": {
+            "min": 1500.0,
+            "max": 2998.83,
+            "mean": 2032.884,
+            "std": 265.08823607817015,
+            "median": 2011.08,
+            "q25": 1868.0225,
+            "q75": 2156.1899999999996
+          },
+          "normalization_details": {
+            "method": "kmeans_binning",
+            "num_bins": 5,
+            "bin_labels": [
+              "极低rpm",
+              "低rpm",
+              "中rpm",
+              "高rpm",
+              "极高rpm"
+            ],
+            "bin_boundaries": [
+              1500.0,
+              1774.8115189203113,
+              1986.368301499033,
+              2193.0868588715384,
+              2545.5478020694754,
+              2998.83
+            ]
+          },
+          "normalized_distribution": {
+            "极低rpm": {
+              "count": 400,
+              "percentage": 13.33
+            },
+            "低rpm": {
+              "count": 963,
+              "percentage": 32.1
+            },
+            "中rpm": {
+              "count": 1031,
+              "percentage": 34.37
+            },
+            "高rpm": {
+              "count": 456,
+              "percentage": 15.2
+            },
+            "极高rpm": {
+              "count": 150,
+              "percentage": 5.0
+            }
+          }
+        },
+        "department": {
+          "feature_name": "department",
+          "original_type": "categorical",
+          "normalized_type": "categorical_encoded",
+          "normalization_details": {
+            "method": "prefix_encoding",
+            "encoding_format": "department_{value}"
+          },
+          "normalized_distribution": {
+            "department_维修部": {
+              "count": 762,
+              "percentage": 25.4
+            },
+            "department_生产部": {
+              "count": 757,
+              "percentage": 25.23
+            },
+            "department_研发部": {
+              "count": 742,
+              "percentage": 24.73
+            },
+            "department_质检部": {
+              "count": 739,
+              "percentage": 24.63
+            }
+          }
+        }
+      }
+    },
+    "dataset_summary": {
+      "total_rows": 3000,
+      "total_columns": 9,
+      "numerical_features": 5,
+      "categorical_features": 1,
+      "id_columns": 2,
+      "target_column": "故障类型",
+      "discretization_method": "kmeans",
+      "num_bins": 5
+    }
+  }
+}

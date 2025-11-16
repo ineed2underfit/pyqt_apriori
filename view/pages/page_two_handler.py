@@ -7,25 +7,49 @@ import os
 # 导入优化脚本中的核心函数
 from new_bayesian.dataset.optimal_rules import filter_optimal_rules, get_best_rule_per_fault
 
+
 class PageTwoHandler(QObject):
     initial_rules_ready = Signal(object)  # 初始规则分析完成信号
     optimized_rules_ready = Signal(object) # 优化规则完成信号
 
-    def __init__(self, parent: 'PageTwo'):
+    def __init__(self, parent: 'PageTwo', apriori_service=None):
         super().__init__(parent)
         self._parent = parent
+        self.apriori_service = apriori_service
         self.log_dialog = None
         self.thread = None
         self.worker = None
+        self._method_progress = 30
+        self._analysis_finished = False
+        self._skip_cleaning_logs = False
 
     def start_mining(self):
         """开始挖掘规则 (使用线程)"""
         if not self._parent.dataset_path:
             self._parent.on_common_error("请先选择数据集！")
             return
+        if not self._parent.dataset_config_info or not self._parent.dataset_config_info.get('dataset_config'):
+            self._parent.on_common_error("请先在数据导入页配置数据集")
+            return
 
-        self._parent.pushButton_2.setEnabled(False)
-        self._parent.pushButton.setEnabled(False) # 禁用优化按钮
+        if not self.apriori_service:
+            self._parent.on_common_error("Apriori 服务未初始化")
+            return
+
+        cleaned_df = self.apriori_service.cleaned_dataframe
+        raw_df = self.apriori_service.raw_dataframe
+        if cleaned_df is not None:
+            data_frame = cleaned_df
+        else:
+            data_frame = raw_df
+        if data_frame is None:
+            self._parent.on_common_error("没有可用的数据，请返回页面一加载数据")
+            return
+
+        self._parent.pushButton_extract.setEnabled(False)
+        self._method_progress = 30
+        self._analysis_finished = False
+        self._skip_cleaning_logs = cleaned_df is not None
 
         try:
             self.log_dialog = LogDialog(title="规则挖掘日志", parent=self._parent)
@@ -33,16 +57,26 @@ class PageTwoHandler(QObject):
 
             self.thread = QThread()
             params = {
-                'min_support': self._parent.doubleSpinBox_2.value(),
-                'min_confidence': self._parent.doubleSpinBox_3.value(),
-                'min_lift': self._parent.doubleSpinBox.value(),
+                'min_support': self._parent.doubleSpinBox_support.value(),
+                'min_confidence': self._parent.doubleSpinBox_confidence.value(),
+                'min_lift': self._parent.doubleSpinBox_lift.value(),
+                'num_bins': int(self._parent.doubleSpinBox_binning.value()),
                 'auto_optimize': True
             }
-            self.worker = AprioriWorker(self._parent.dataset_path, params)
+            dataset_config = self._parent.dataset_config_info.get('dataset_config')
+            rule_config = self._parent.dataset_config_info.get('rule_config')
+            self.worker = AprioriWorker(
+                self._parent.dataset_path,
+                params,
+                dataset_config=dataset_config,
+                rule_config=rule_config,
+                data_frame=data_frame.copy(),
+                data_is_cleaned=cleaned_df is not None
+            )
             self.worker.moveToThread(self.thread)
 
             self.thread.started.connect(self.worker.run)
-            self.worker.log_message.connect(self.log_dialog.append_log)
+            self.worker.log_message.connect(self._handle_log_message)
             self.worker.progress_updated.connect(self._parent.update_progress)
             self.worker.analysis_succeeded.connect(self.on_analysis_success)
             self.worker.analysis_failed.connect(self.on_analysis_error)
@@ -54,7 +88,7 @@ class PageTwoHandler(QObject):
 
         except Exception as e:
             self._parent.on_common_error(f"启动分析时出错: {str(e)}")
-            self._parent.pushButton_2.setEnabled(True)
+            self._parent.pushButton_extract.setEnabled(True)
 
     def optimize_rules(self):
         """执行规则优化"""
@@ -99,8 +133,9 @@ class PageTwoHandler(QObject):
         """处理分析成功的结果"""
         # 发送信号给MainWindow，使其可以存储这份原始数据
         self.initial_rules_ready.emit(results_df)
-        # 启用优化按钮
-        self._parent.pushButton.setEnabled(True)
+        self._parent.pushButton_extract.setEnabled(True)
+        self._analysis_finished = True
+        self._parent.update_progress(100, "规则挖掘完成")
 
         try:
             # 使用HTML格式化显示规则
@@ -113,7 +148,8 @@ class PageTwoHandler(QObject):
 
     def on_analysis_error(self, error_message):
         self._parent.on_common_error(f"分析过程出错: {error_message}")
-        self._parent.progressBar.setValue(0)
+        self._analysis_finished = True
+        self._parent.update_progress(0, "分析失败")
 
     def cleanup_thread(self):
         if self.thread and self.thread.isRunning():
@@ -122,10 +158,27 @@ class PageTwoHandler(QObject):
         self.thread = None
         self.worker = None
         if self._parent:
-            self._parent.pushButton_2.setEnabled(True)
+            self._parent.pushButton_extract.setEnabled(True)
 
     def on_parameter_changed(self):
         pass
+
+    def _handle_log_message(self, message: str):
+        if self._skip_cleaning_logs:
+            skip_keywords = ("数据质量", "数据清洗", "清洗", "异常值", "字符串数据")
+            if any(keyword in message for keyword in skip_keywords):
+                return
+        if self.log_dialog:
+            self.log_dialog.append_log(message)
+        if self._analysis_finished:
+            return
+        if "测试离散化方法" in message:
+            self._method_progress = min(self._method_progress + 5, 80)
+            self._parent.update_progress(self._method_progress, message)
+        elif "关联规则生成完成" in message:
+            self._parent.update_progress(85, message)
+        elif "正在过滤" in message:
+            self._parent.update_progress(90, message)
 
     def _format_rules_html(self, rules_df, title):
         """将规则DataFrame格式化为美观的HTML显示"""

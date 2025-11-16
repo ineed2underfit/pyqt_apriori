@@ -8,24 +8,24 @@ from view.pages.page_one_handler import PageOneHandler
 
 
 class PageOne(QWidget, Ui_page_one):
-    # 添加文件选择信号
     file_selected = Signal(str)
+    dataset_configured = Signal(dict)
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, apriori_service=None):
         super().__init__(parent)
         self.loading_bar = None
         self.setupUi(self)
-        # PageOne 创建 Handler 实例并建立双向引用
-        self.handler = PageOneHandler(self)
+        self.pushButton_clean.setEnabled(False)
+        self.handler = PageOneHandler(self, apriori_service=apriori_service)
         self.bind_event()
 
-    # 主动功能（绑定相关）：
+    # 主动功能（绑定相关）
     def bind_event(self):
-        # View 将按钮点击事件委托给 Handler
-        self.pushButton.clicked.connect(self.handler.select_file) # 绑定事件
-        # self.pushButton_2.clicked.connect(self.handler.handle_case_split) # 绑定事件
+        self.pushButton.clicked.connect(self.handler.select_file)
+        if hasattr(self, 'pushButton_clean'):
+            self.pushButton_clean.clicked.connect(self.handler.clean_data)
 
-    # 被动显示（辅助函数）：
+    # 被动显示（辅助函数）
     def show_state_tooltip(self, title, content):
         self.loading_bar = ProgressInfoBar(title, content, self)
         self.loading_bar.show()
@@ -39,5 +39,7 @@ class PageOne(QWidget, Ui_page_one):
         show_dialog(self, msg, '提示')
 
     def emit_file_selected(self, file_path):
-        """发送文件选择信号"""
         self.file_selected.emit(file_path)
+
+    def emit_dataset_config(self, info: dict):
+        self.dataset_configured.emit(info)

@@ -1,43 +1,113 @@
+import importlib.util
+import io
+import os
+import types
+from contextlib import redirect_stdout
+
 from PySide6.QtCore import QObject, Signal
-from apriori.apriori1 import EquipmentAnalyzer
+
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+APRIORI_MODULE_PATH = os.path.join(PROJECT_ROOT, "Bayesian_1130", "Apriori", "Apriori.py")
+_spec = importlib.util.spec_from_file_location("gui_equipment_analyzer_worker", APRIORI_MODULE_PATH)
+if _spec is None or _spec.loader is None:
+    raise ImportError(f"无法加载 Apriori 模块: {APRIORI_MODULE_PATH}")
+_module = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_module)
+EquipmentAnalyzer = _module.EquipmentAnalyzer
+
+
+class LogEmitter(io.TextIOBase):
+    def __init__(self, signal):
+        super().__init__()
+        self.signal = signal
+        self._buffer = ""
+
+    def write(self, s):
+        if not s:
+            return 0
+        self._buffer += s
+        while "\n" in self._buffer:
+            line, self._buffer = self._buffer.split("\n", 1)
+            if line.strip():
+                self.signal.emit(line.rstrip())
+        return len(s)
+
+    def flush(self):
+        if self._buffer.strip():
+            self.signal.emit(self._buffer.strip())
+        self._buffer = ""
+
 
 class AprioriWorker(QObject):
-    """
-    Apriori 分析器的工作线程对象，用于在后台执行耗时任务。
-    """
-    # 转发 EquipmentAnalyzer 的信号
+    """后台执行 Apriori 关联规则挖掘"""
+
     log_message = Signal(str)
     progress_updated = Signal(int, str)
     analysis_succeeded = Signal(object)
     analysis_failed = Signal(str)
 
-    def __init__(self, dataset_path, params):
+    def __init__(self, dataset_path, params, dataset_config=None, rule_config=None, data_frame=None, data_is_cleaned=False):
         super().__init__()
         self.dataset_path = dataset_path
-        self.params = params
+        self.params = params or {}
+        self.dataset_config = dataset_config
+        self.rule_config = rule_config
+        self.data_frame = data_frame
+        self.data_is_cleaned = data_is_cleaned
         self.analyzer = None
         self._is_running = True
 
     def run(self):
-        """这个方法将在子线程中执行"""
+        if not self._is_running:
+            return
+
         try:
+            self.progress_updated.emit(5, "准备执行规则挖掘...")
+            self.analyzer = EquipmentAnalyzer(file_path=self.dataset_path)
+
+            if self.dataset_config:
+                self.analyzer.set_dataset_config(self.dataset_config)
+            if self.rule_config:
+                self.analyzer.set_rule_config(**self.rule_config)
+
+            params = dict(self.params)
+            num_bins = params.pop('num_bins', None)
+            if num_bins is not None:
+                try:
+                    setattr(self.analyzer, 'num_bins', int(num_bins))
+                except Exception:
+                    pass
+
+            if self.data_frame is not None:
+                raw_df = self.data_frame
+            else:
+                raw_df = self.analyzer.load_data(auto_detect=False, interactive=False)
+            self.analyzer.raw_data = raw_df
+            self.progress_updated.emit(15, "数据加载完成，准备离散化优化...")
+
+            def _cached_load_data(self_analyzer, auto_detect=True, interactive=False):
+                return raw_df
+
+            self.analyzer.load_data = types.MethodType(_cached_load_data, self.analyzer)
+            if self.data_is_cleaned:
+                def _no_clean(self_analyzer, df):
+                    return df
+                self.analyzer.clean_data = types.MethodType(_no_clean, self.analyzer)
+                self.analyzer.print_cleaning_report = types.MethodType(lambda *_: None, self.analyzer)
+
+            emitter = LogEmitter(self.log_message)
+            self.progress_updated.emit(30, "开始离散化方法优化...")
+
+            with redirect_stdout(emitter):
+                results_df = self.analyzer.analyze(**params, interactive=False)
+
+            emitter.flush()
+
             if not self._is_running:
                 return
 
-            self.analyzer = EquipmentAnalyzer(self.dataset_path)
-
-            # 转发信号：将analyzer的信号连接到worker自己的信号上
-            self.analyzer.log_message.connect(self.log_message)
-            self.analyzer.progress_updated.connect(self.progress_updated)
-
-            # 执行耗时任务
-            results_df = self.analyzer.analyze(**self.params)
-
-            if not self._is_running:
-                return
-
-            if results_df.empty:
-                self.analysis_failed.emit("分析完成，但未找到任何规则。")
+            if results_df is None or results_df.empty:
+                self.analysis_failed.emit("分析完成，但未找到任何规则")
             else:
                 self.analysis_succeeded.emit(results_df)
 
@@ -48,4 +118,3 @@ class AprioriWorker(QObject):
 
     def stop(self):
         self._is_running = False
-

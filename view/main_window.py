@@ -5,6 +5,7 @@ from PySide6.QtWidgets import QLabel, QMenu, QApplication, QSystemTrayIcon
 from qfluentwidgets import FluentWindow, NavigationItemPosition
 from components.icon import MyIcon
 from qfluentwidgets import FluentIcon as FIF
+from services import AprioriService
 from view.pages.page_one import PageOne
 from view.pages.page_two import PageTwo
 from view.pages.page_3 import Page3
@@ -29,10 +30,13 @@ class MainWindow(FluentWindow):
         else:
             self.navigationInterface.setExpandWidth(150)
 
+        # Service
+        self.apriori_service = AprioriService()
+
         # 子界面
         self.settingInterface = SettingInterface(self)
-        self.pageOne = PageOne(self)
-        self.pageTwo = PageTwo(self)
+        self.pageOne = PageOne(self, apriori_service=self.apriori_service)
+        self.pageTwo = PageTwo(self, apriori_service=self.apriori_service)
         self.page3 = Page3(self)
         self.page4 = Page4(self)
         self.page5 = Page5(self)
@@ -44,6 +48,7 @@ class MainWindow(FluentWindow):
 
         # 连接信号与槽
         self.pageOne.file_selected.connect(self.on_file_path_changed)
+        self.pageOne.dataset_configured.connect(self.on_dataset_configured)
         self.pageTwo.handler.initial_rules_ready.connect(self.on_initial_rules_ready)
         self.pageTwo.handler.optimized_rules_ready.connect(self.on_optimized_rules_ready)
 
@@ -96,6 +101,9 @@ class MainWindow(FluentWindow):
         """处理文件路径变化"""
         self.dataset_path = path  # 保存原始数据集路径
         self.pageTwo.set_dataset_path(path)
+
+    def on_dataset_configured(self, info):
+        self.pageTwo.set_dataset_config_info(info)
 
     def on_initial_rules_ready(self, df):
         """接收并存储初始规则"""
