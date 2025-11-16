@@ -1,73 +1,108 @@
-from PySide6.QtCore import QObject, Signal
-import sys
+import importlib.util
+import io
 import os
+import shutil
+from contextlib import redirect_stdout
 
-project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-bn_path = os.path.join(project_root, "new_bayesian", "BN_new")
-sys.path.append(os.path.abspath(bn_path))
-from bn_bayesian import run_analysis
+from PySide6.QtCore import QObject, Signal
 
-class Stream(QObject):
-    new_text = Signal(str)
-    def write(self, text):
-        self.new_text.emit(str(text))
+
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+BAYESIAN_ROOT = os.path.join(PROJECT_ROOT, "Bayesian_1130")
+DATA_DIR = os.path.join(BAYESIAN_ROOT, "datas")
+APR_BINNING_PATH = os.path.join(BAYESIAN_ROOT, "Apriori", "分箱配置.json")
+RESULT_DIR = os.path.join(BAYESIAN_ROOT, "result", "bayesian_results")
+RULES_CSV_PATH = os.path.join(BAYESIAN_ROOT, "result", "apriori_results", "关联规则分析结果.csv")
+
+os.makedirs(DATA_DIR, exist_ok=True)
+os.makedirs(RESULT_DIR, exist_ok=True)
+
+
+def _load_module(module_name, relative_path):
+    module_path = os.path.join(BAYESIAN_ROOT, relative_path)
+    spec = importlib.util.spec_from_file_location(module_name, module_path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"无法加载模块: {module_path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+build_model_module = _load_module(
+    "bayesian_build_model",
+    os.path.join("Bayesian", "build_model.py")
+)
+
+
+class LogEmitter(io.TextIOBase):
+    def __init__(self, signal):
+        super().__init__()
+        self.signal = signal
+        self._buffer = ""
+
+    def write(self, s):
+        if not s:
+            return 0
+        self._buffer += s
+        while "\n" in self._buffer:
+            line, self._buffer = self._buffer.split("\n", 1)
+            if line.strip():
+                self.signal.emit(line.rstrip())
+        return len(s)
+
     def flush(self):
-        pass
+        if self._buffer.strip():
+            self.signal.emit(self._buffer.strip())
+        self._buffer = ""
+
 
 class BayesianWorker(QObject):
-    finished = Signal(str, str)
+    finished = Signal(str)
     error = Signal(str)
     log_message = Signal(str)
-    progress_updated = Signal(int, str) # 新增进度信号
+    progress_updated = Signal(int, str)
 
-    def __init__(self, dataset_path, rules_path, network_path, cm_path, report_dir):
+    def __init__(self, dataset_path):
         super().__init__()
         self.dataset_path = dataset_path
-        self.rules_path = rules_path
-        self.network_path = network_path
-        self.cm_path = cm_path
-        self.report_dir = report_dir
 
     def run(self):
-        stream = Stream()
-        stream.new_text.connect(self._process_log_line)
-        original_stdout = sys.stdout
-        sys.stdout = stream
-
         try:
-            run_analysis(self.dataset_path, self.rules_path, self.network_path, self.cm_path, self.report_dir)
+            if not os.path.exists(RULES_CSV_PATH):
+                raise FileNotFoundError(
+                    f"未找到关联规则文件，请先在页面二完成规则挖掘: {RULES_CSV_PATH}"
+                )
 
-            if not os.path.exists(self.cm_path) or not os.path.exists(self.network_path):
-                raise FileNotFoundError("脚本执行完毕，但未找到预期的结果图片文件。")
+            self.progress_updated.emit(5, "准备构建贝叶斯网络...")
+            train_filename = self._prepare_dataset_file()
 
-            self.finished.emit(self.cm_path, self.network_path)
+            emitter = LogEmitter(self.log_message)
 
-        except Exception as e:
-            import traceback
-            traceback.print_exc()
-            self.error.emit(str(e))
-        finally:
-            sys.stdout = original_stdout
+            self.progress_updated.emit(20, "训练贝叶斯网络...")
+            with redirect_stdout(emitter):
+                build_model_module.build_and_save_bayesian_model(
+                    train_filename, model_name="final_bn_model.pkl"
+                )
 
-    def _process_log_line(self, text):
-        text = text.strip()
-        if not text:
-            return
-        
-        self.log_message.emit(text)
+            bn_structure_path = os.path.join(RESULT_DIR, "bn_structure.png")
+            if not os.path.exists(bn_structure_path):
+                raise FileNotFoundError(f"未找到网络结构图: {bn_structure_path}")
 
-        # 根据日志内容判断进度
-        if "正在加载数据" in text:
-            self.progress_updated.emit(10, "正在加载数据...")
-        elif "开始数据预处理" in text:
-            self.progress_updated.emit(25, "正在预处理数据...")
-        elif "正在加载规则" in text:
-            self.progress_updated.emit(40, "正在加载规则...")
-        elif "开始处理规则" in text:
-            self.progress_updated.emit(50, "正在构建网络结构...")
-        elif "开始构建贝叶斯网络" in text:
-            self.progress_updated.emit(60, "正在构建贝叶斯网络...")
-        elif "开始可视化网络结构" in text:
-            self.progress_updated.emit(70, "正在生成网络结构图...")
-        elif "开始进行贝叶斯参数估计" in text:
-            self.progress_updated.emit(80, "正在估计参数并生成报告...")
+            self.progress_updated.emit(100, "贝叶斯网络构建完成")
+            self.finished.emit(bn_structure_path)
+
+        except Exception as exc:
+            self.error.emit(str(exc))
+
+    def _prepare_dataset_file(self):
+        """确保数据位于 Bayes datas 目录，并返回文件名"""
+        if not os.path.exists(self.dataset_path):
+            raise FileNotFoundError(f"数据集不存在: {self.dataset_path}")
+
+        filename = os.path.basename(self.dataset_path)
+        target_path = os.path.join(DATA_DIR, filename)
+
+        if os.path.abspath(self.dataset_path) != os.path.abspath(target_path):
+            shutil.copy2(self.dataset_path, target_path)
+
+        return filename

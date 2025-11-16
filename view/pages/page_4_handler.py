@@ -17,7 +17,7 @@ class PageFourHandler(QObject):
         """打开文件对话框，让用户选择测试数据集"""
         try:
             project_root = os.getcwd()
-            default_dir = os.path.join(project_root, "new_bayesian", "dataset", "testdata_info")
+            default_dir = os.path.join(project_root, "Bayesian_1130", "datas")
             file_path, _ = QFileDialog.getOpenFileName(
                 self._parent, "选择测试数据文件", default_dir, "CSV Files (*.csv);;All Files (*.*)"
             )
@@ -98,9 +98,8 @@ class PageFourHandler(QObject):
     def on_batch_assessment_finished(self, report_text):
         """批量评估成功的回调"""
         # 将纯文本报告包装为HTML，并尝试展示混淆矩阵图片
-        # 约定混淆矩阵输出路径：new_bayesian/predict/results/confusion_matrix.png
         project_root = os.getcwd()
-        cm_path = os.path.join(project_root, "new_bayesian", "predict", "results", "confusion_matrix.png")
+        cm_path = os.path.join(project_root, "Bayesian_1130", "result", "bayesian_results", "confusion_matrix.png")
 
         html = '<div style="font-size: 10pt; line-height: 1.6; color: #2c3e50;">'
         html += '<div style="padding: 10px 0; border-bottom: 2px solid #3498db; margin-bottom: 10px;">'

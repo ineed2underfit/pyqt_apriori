@@ -22,7 +22,7 @@ class MainWindow(FluentWindow):
         super().__init__()
 
         # 定义共享文件路径
-        self.model_pkl_path = os.path.abspath("new_bayesian/pkl/bn_bayesian_model.pkl")
+        self.model_pkl_path = os.path.abspath("Bayesian_1130/Bayesian/models/final_bn_model.pkl")
 
         if sys.platform == "darwin":
             self.navigationInterface.panel.setReturnButtonVisible(False)

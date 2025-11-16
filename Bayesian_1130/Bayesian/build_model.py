@@ -8,7 +8,7 @@ import json
 import re
 import networkx as nx
 from datetime import datetime
-from pgmpy.models import BayesianNetwork
+from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.estimators import BayesianEstimator
 import matplotlib.pyplot as plt
 
@@ -282,8 +282,8 @@ def discretize_raw_data(raw_data, binning_config):
     return df_discrete
 
 
-def learn_parameters(model: BayesianNetwork, data: pd.DataFrame,
-    prior_type = "BDeu", equivalent_sample_size = 10) -> BayesianNetwork:
+def learn_parameters(model: DiscreteBayesianNetwork, data: pd.DataFrame,
+    prior_type = "BDeu", equivalent_sample_size = 10) -> DiscreteBayesianNetwork:
     """
     参数学习函数
     """
@@ -441,7 +441,7 @@ def build_and_save_bayesian_model(data_filename: str, model_name: str = None):
 
     # 6. 构建网络结构（基于离散化后的节点名，并获取筛选后的规则）
     edges, final_rules = rules_to_dag(rules_df, binning_config, max_rules_per_consequent=3, max_total_edges=50)
-    bn_model = BayesianNetwork(edges)
+    bn_model = DiscreteBayesianNetwork(edges)
     print(f"✅ 网络结构构建完成，包含 {len(edges)} 条边")
 
     # 7. 创建节点到列的映射
