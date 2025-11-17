@@ -14,7 +14,7 @@ from datetime import datetime
 # --- 配置路径 ---
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MODEL_PATH = os.path.join(PROJECT_ROOT, "Bayesian", "models", "final_bn_model.pkl")  # 请替换为您实际的pkl文件名
-DATA_PATH = os.path.join(PROJECT_ROOT, "datas", "device_PA40_data.csv")
+DATA_PATH = os.path.join(PROJECT_ROOT, "datas", "device_HP30_testdata.csv")
 BINNING_CONFIG_PATH = os.path.join(PROJECT_ROOT, "Apriori", "分箱配置.json")
 RULES_PATH = os.path.join(PROJECT_ROOT, "result", "bayesian_results", "network_rules_with_mapping.json")
 RESULT_DIR = os.path.join(PROJECT_ROOT, "result", "bayesian_results")
@@ -223,7 +223,7 @@ def save_prediction_report(y_true, y_pred, prediction_probs, model_path, report_
     class_report = classification_report(y_true, y_pred, labels=all_states, output_dict=True, zero_division=0.0)
 
     # 生成报告文本
-    report_text = f"""贝叶斯网络预测报告
+    report_text = f"""质量评价模型分析报告
 ===========================
 生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 模型路径: {model_path}
@@ -252,7 +252,7 @@ def save_prediction_report(y_true, y_pred, prediction_probs, model_path, report_
 
     with open(report_save_path, 'w', encoding='utf-8') as f:
         f.write(report_text)
-    print(f"✅ 预测报告已保存至: {report_save_path}")
+    print(f"✅ 质量评价模型分析报告已保存至: {report_save_path}")
 
 
 def save_confusion_matrix(y_true, y_pred, target_states, cm_save_path):
@@ -433,7 +433,7 @@ def main_one():
     print("=" * 50)
 
     # 10. 生成并保存报告
-    report_text = f"""设备状态预测报告
+    report_text = f"""质量评价报告
 ===========================
 最可能的状态是: {predicted_status}，概率为{max_prob:.4f} (最高概率)
 需要特别关注的参数为: {key_params_str}
@@ -457,8 +457,8 @@ def main_one():
     report_path = os.path.join(RESULT_DIR, report_filename)
     with open(report_path, 'w', encoding='utf-8') as f:
         f.write(report_text)
-    print(f"📄 预测报告已保存至: {report_path}")
-    print("✅ 预测完成！")
+    print(f"📄 质量评价报告已保存至: {report_path}")
+    print("✅ 质量评价完成！")
 
 
 def main():

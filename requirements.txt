@@ -59,3 +59,4 @@ typing_extensions==4.13.2
 tzdata==2025.2
 wheel==0.45.1
 win32_setctime==1.2.0
+psutil==7.1.3

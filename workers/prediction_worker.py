@@ -56,7 +56,7 @@ class LogEmitter:
 
 
 class PredictionWorker(QObject):
-    batch_finished = Signal(str)
+    batch_finished = Signal(str, str)  # report_text, confusion_matrix_path
     single_prediction_finished = Signal(str, object, object)
     error = Signal(str)
     progress_updated = Signal(int)
@@ -104,8 +104,12 @@ class PredictionWorker(QObject):
                 report_text = f.read()
         else:
             report_text = "预测完成，但未找到 prediction_report.txt"
+        cm_path = os.path.join(RESULT_DIR, "confusion_matrix.png")
+        if not os.path.exists(cm_path):
+            cm_path = ""
+
         self.progress_updated.emit(100)
-        self.batch_finished.emit(report_text)
+        self.batch_finished.emit(report_text, cm_path)
 
     def _run_single(self, data_dict):
         self.progress_updated.emit(10)

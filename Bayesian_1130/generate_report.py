@@ -62,7 +62,7 @@ def main():
     doc = Document()
 
     # 标题
-    doc.add_heading('故障预测分析报告', 0)
+    doc.add_heading('质量评价模型分析报告', 0)
     doc.add_paragraph()  # 空行
 
     # ============ Apriori 数据挖掘板块 ============

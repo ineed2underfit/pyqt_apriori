@@ -95,28 +95,23 @@ class PageFourHandler(QObject):
 
         self.thread.start()
 
-    def on_batch_assessment_finished(self, report_text):
+    def on_batch_assessment_finished(self, report_text, cm_path):
         """批量评估成功的回调"""
-        # 将纯文本报告包装为HTML，并尝试展示混淆矩阵图片
-        project_root = os.getcwd()
-        cm_path = os.path.join(project_root, "Bayesian_1130", "result", "bayesian_results", "confusion_matrix.png")
-
         html = '<div style="font-size: 10pt; line-height: 1.6; color: #2c3e50;">'
         html += '<div style="padding: 10px 0; border-bottom: 2px solid #3498db; margin-bottom: 10px;">'
         html += '<span style="font-size: 12pt; font-weight: bold;">📋 批量质量评估报告</span>'
         html += '</div>'
 
-        # 文本报告区域（左对齐、等宽字体更易读）
         html += '<pre style="white-space: pre-wrap; word-wrap: break-word; font-family: Consolas, Menlo, monospace; font-size: 9pt; background: #f7f9fb; padding: 10px; border-radius: 6px; border: 1px solid #e3e9ef;">'
         html += self._escape_html(report_text)
         html += '</pre>'
 
-        # 图片区域
-        if os.path.exists(cm_path):
-            html += '<div style="margin-top: 12px;">'
+        if cm_path and os.path.exists(cm_path):
+            img_path = cm_path.replace("\\", "/")
+            html += '<div style="margin-top: 12px; text-align:center;">'
             html += '<div style="margin: 6px 0 8px 0; font-weight: bold; color: #34495e;">🧭 混淆矩阵</div>'
-            # 注意：QTextEdit 支持本地图片相对/绝对路径
-            html += f'<img src="{cm_path}" alt="confusion_matrix" style="max-width: 100%; border: 1px solid #e3e9ef; border-radius: 6px;" />'
+            html += (f'<img src="file:///{img_path}" alt="confusion_matrix" '
+                     f'style="max-width:90%; height:auto; border:1px solid #e3e9ef; border-radius:6px;" />')
             html += '</div>'
 
         html += '</div>'
