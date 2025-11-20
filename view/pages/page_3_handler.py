@@ -67,7 +67,7 @@ class PageThreeHandler(QObject):
         self.thread = None
         self.worker = None
         if self.log_dialog:
-            self.log_dialog.close()
+            self.log_dialog.append_log("=== 构建流程已结束，可手动关闭此窗口查看完整记录 ===")
             self.log_dialog = None
         if self._parent:
             self._parent.pushButton.setEnabled(True)

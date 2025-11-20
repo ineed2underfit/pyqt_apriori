@@ -2,7 +2,7 @@ import sys
 from PySide6.QtCore import QRect, QSize, Qt
 from PySide6.QtGui import QIcon, QPixmap, QPainter, QLinearGradient, QColor, QBrush, QAction
 from PySide6.QtWidgets import QLabel, QMenu, QApplication, QSystemTrayIcon
-from qfluentwidgets import FluentWindow, NavigationItemPosition
+from qfluentwidgets import FluentWindow, NavigationItemPosition, NavigationDisplayMode
 from components.icon import MyIcon
 from qfluentwidgets import FluentIcon as FIF
 from services import AprioriService
@@ -11,6 +11,7 @@ from view.pages.page_two import PageTwo
 from view.pages.page_3 import Page3
 from view.pages.page_4 import Page4
 from view.pages.page_5 import Page5
+from view.pages.page_6 import Page6
 from view.pages.setting_page import SettingInterface
 import os
 
@@ -29,6 +30,16 @@ class MainWindow(FluentWindow):
             self.navigationInterface.panel.topLayout.setContentsMargins(4, 24, 4, 0)
         else:
             self.navigationInterface.setExpandWidth(150)
+            try:
+                self.navigationInterface.setDisplayMode(NavigationDisplayMode.MENU)
+                if hasattr(self.navigationInterface, "setCollapsible"):
+                    # 禁用自动折叠逻辑，同时手动保留菜单按钮以便用户控制
+                    self.navigationInterface.setCollapsible(False)
+                    if hasattr(self.navigationInterface, "panel"):
+                        self.navigationInterface.panel.setMenuButtonVisible(True)
+            except AttributeError:
+                if hasattr(self.navigationInterface, "collapse"):
+                    self.navigationInterface.collapse(useAni=False)
 
         # Service
         self.apriori_service = AprioriService()
@@ -40,6 +51,7 @@ class MainWindow(FluentWindow):
         self.page3 = Page3(self)
         self.page4 = Page4(self)
         self.page5 = Page5(self)
+        self.page6 = Page6(self)
 
         # 数据中心: 用于存储跨页面共享的数据
         self.dataset_path = None
@@ -83,7 +95,8 @@ class MainWindow(FluentWindow):
             {'widget': self.pageTwo, 'icon': MyIcon.EXTRACTION, 'text': '规则挖掘'},
             {'widget': self.page3, 'icon': MyIcon.EXCEL, 'text': '贝叶斯网络'},
             {'widget': self.page4, 'icon': MyIcon.BRANCH, 'text': '质量评估'},
-            {'widget': self.page5, 'icon': MyIcon.PAGE_BREAK, 'text': '历史查询'}
+            {'widget': self.page5, 'icon': MyIcon.PAGE_BREAK, 'text': '历史查询'},
+            {'widget': self.page6, 'icon': MyIcon.OCR, 'text': '报告生成'}
         ]
         for item in sub_interface_list:
             self.addSubInterface(item['widget'], item['icon'], item['text'])
@@ -93,7 +106,7 @@ class MainWindow(FluentWindow):
         if sys.platform != "darwin":
             self.setWindowIcon(QIcon(':/resource/images/army_icon.png'))
             self.setWindowTitle('装备质量评估系统')
-        self.resize(900, 700)
+        self.resize(1000, 800)
         self.move((self.screen().size().width() - self.width()) / 2,
                   (self.screen().size().height() - self.height()) / 2)
 
@@ -103,6 +116,7 @@ class MainWindow(FluentWindow):
         self.pageTwo.set_dataset_path(path)
 
     def on_dataset_configured(self, info):
+        self.dataset_config_info = info
         self.pageTwo.set_dataset_config_info(info)
 
     def on_initial_rules_ready(self, df):

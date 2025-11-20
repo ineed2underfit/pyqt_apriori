@@ -47,7 +47,7 @@ class Ui_page_two(object):
         self.doubleSpinBox_support.setMinimum(0.000000000000000)
         self.doubleSpinBox_support.setMaximum(96.989999999999995)
         self.doubleSpinBox_support.setSingleStep(0.001000000000000)
-        self.doubleSpinBox_support.setValue(0.005000000000000)
+        self.doubleSpinBox_support.setValue(0.010000000000000)
 
         self.gridLayout.addWidget(self.doubleSpinBox_support, 1, 0, 1, 1)
 
@@ -60,7 +60,7 @@ class Ui_page_two(object):
         self.doubleSpinBox_confidence.setSizePolicy(sizePolicy1)
         self.doubleSpinBox_confidence.setDecimals(3)
         self.doubleSpinBox_confidence.setSingleStep(0.010000000000000)
-        self.doubleSpinBox_confidence.setValue(0.500000000000000)
+        self.doubleSpinBox_confidence.setValue(0.550000000000000)
 
         self.gridLayout.addWidget(self.doubleSpinBox_confidence, 3, 0, 1, 1)
 
@@ -133,11 +133,6 @@ class Ui_page_two(object):
 
         self.horizontalLayout = QHBoxLayout()
         self.horizontalLayout.setObjectName(u"horizontalLayout")
-        self.verticalLayout_2 = QVBoxLayout()
-        self.verticalLayout_2.setObjectName(u"verticalLayout_2")
-
-        self.horizontalLayout.addLayout(self.verticalLayout_2)
-
         self.verticalLayout_3 = QVBoxLayout()
         self.verticalLayout_3.setObjectName(u"verticalLayout_3")
         self.textEdit_3 = QTextEdit(page_two)

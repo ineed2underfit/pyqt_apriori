@@ -109,6 +109,21 @@ class AprioriWorker(QObject):
             if results_df is None or results_df.empty:
                 self.analysis_failed.emit("分析完成，但未找到任何规则")
             else:
+                try:
+                    result_dir = self.analyzer.get_result_dir()
+                    os.makedirs(result_dir, exist_ok=True)
+
+                    # 保存最新规则结果，供贝叶斯模块直接使用
+                    csv_path = os.path.join(result_dir, "关联规则分析结果.csv")
+                    results_df.to_csv(csv_path, index=False, encoding="utf-8-sig")
+
+                    # 导出完整配置（含分箱信息）
+                    raw_data = getattr(self.analyzer, "raw_data", None)
+                    processed_data = getattr(self.analyzer, "processed_data", None)
+                    self.analyzer.export_comprehensive_config(result_dir, raw_data, processed_data)
+                except Exception as export_exc:
+                    if self.log_message:
+                        self.log_message.emit(f"⚠️ 导出规则/配置失败: {export_exc}")
                 self.analysis_succeeded.emit(results_df)
 
         except Exception as e:

@@ -25,8 +25,8 @@ class PageTwo(QWidget, Ui_page_two):
     def init_ui_state(self):
         # 设置默认值
         self.doubleSpinBox_lift.setValue(1.2)      # 最小提升度 (lift)
-        self.doubleSpinBox_support.setValue(0.005)  # 最小支持度 (support)
-        self.doubleSpinBox_confidence.setValue(0.5)    # 最小置信度 (confidence)
+        self.doubleSpinBox_support.setValue(0.01)  # 最小支持度 (support)
+        self.doubleSpinBox_confidence.setValue(0.55)    # 最小置信度 (confidence)
         self.doubleSpinBox_binning.setValue(5)
         self.pushButton_extract.setEnabled(False)     # 开始挖掘按钮初始禁用
         self.progressBar.setValue(0)            # 重置进度条为0

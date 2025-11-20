@@ -1,8 +1,21 @@
-from PySide6.QtCore import QObject, QThread, Signal, Qt
-from PySide6.QtWidgets import QFileDialog
+from PySide6.QtCore import QObject, QThread, Signal
+from PySide6.QtWidgets import (
+    QFileDialog,
+    QDialog,
+    QFormLayout,
+    QDialogButtonBox,
+    QComboBox,
+    QDoubleSpinBox,
+    QLabel,
+    QVBoxLayout,
+    QWidget,
+    QScrollArea,
+)
 from common.utils import show_dialog
-from workers.prediction_worker import PredictionWorker
+from workers.prediction_worker import PredictionWorker, RESULT_DIR
 import os
+import re
+import json
 
 class PageFourHandler(QObject):
     def __init__(self, parent: 'Page4'):
@@ -11,6 +24,7 @@ class PageFourHandler(QObject):
         self.test_data_path = None
         self.thread = None
         self.worker = None
+        self._last_single_input = None
 
     # --- 批量评估功能 ---
     def select_test_file(self):
@@ -37,25 +51,16 @@ class PageFourHandler(QObject):
 
     # --- 单次评估功能 ---
     def assess_single_instance(self):
-        """对UI界面上输入的数据进行单次评估"""
-        print("--- assess_single_instance 方法被调用 ---") # DEBUG
-        try:
-            # 从UI收集数据并打包成字典
-            data_dict = {
-                'timestamp': self._parent.dateTimeEdit.dateTime().toString(Qt.DateFormat.ISODate),
-                'device_id': self._parent.comboBox_model.currentText(),
-                'department': self._parent.comboBox_apt.currentText(),
-                'temp': self._parent.doubleSpinBox_temp.value(),
-                'vibration': self._parent.doubleSpinBox_vibration.value(),
-                'oil_pressure': self._parent.doubleSpinBox_oil.value(),
-                'voltage': self._parent.doubleSpinBox_voltage.value(),
-                'rpm': self._parent.doubleSpinBox_rpm.value()
-            }
-            print(f"--- 收集到的单次评估数据: {data_dict} ---") # DEBUG
+        """弹窗输入单条数据并触发预估"""
+        config_info = self._get_dataset_config_info()
+        if not config_info:
+            show_dialog(self._parent, "请先在数据导入页面配置数据集", "提示")
+            return
+        dialog = SinglePredictionDialog(self._parent, config_info, initial_data=self._last_single_input)
+        if dialog.exec() == QDialog.Accepted:
+            data_dict = dialog.get_data()
+            self._last_single_input = dict(data_dict)
             self._run_prediction(data_dict)
-        except Exception as e:
-            print(f"--- assess_single_instance 发生错误: {e} ---") # DEBUG
-            show_dialog(self._parent, f'读取界面数据时出错: {str(e)}', '错误')
 
     # --- 公共的执行和回调逻辑 ---
     def _run_prediction(self, data_payload):
@@ -136,126 +141,111 @@ class PageFourHandler(QObject):
     
     def on_single_assessment_finished(self, prediction_result, input_data_dict, probability_dist):
         """单次评估成功的回调"""
-        # 使用HTML格式化输出，字体稍大一点
+        config_info = self._get_dataset_config_info() or {}
+        dataset_config = config_info.get('dataset_config') or {}
+        feature_names = dataset_config.get('feature_names') or {}
+        column_order = config_info.get('categorical_cols', []) + config_info.get('numerical_cols', [])
+
+        report_text, report_error, report_path = self._read_single_report_text()
+        parsed_report = self._parse_single_report(report_text) if report_text else {}
+
+        predicted_status = parsed_report.get('predicted_status') or prediction_result
+        key_parameters = parsed_report.get('key_parameters')
+        probability_items = parsed_report.get('probabilities')
+        if not probability_items and probability_dist:
+            probability_items = sorted(probability_dist.items(), key=lambda kv: kv[1], reverse=True)
+
         output = '<div style="font-size: 10pt; line-height: 1.6;">'
         output += '<p style="font-size: 11pt; font-weight: bold; color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 8px;">⚡ 单次故障概率评估结果</p>'
-        
+
+        if config_info:
+            output += '<div style="margin: 8px 0 14px 0; padding: 10px; background: #f5f7fb; border: 1px solid #dfe6f0; border-radius: 6px;">'
+            output += f'<p style="margin: 0;"><strong>目标列：</strong>{config_info.get("target_col", "-")} &nbsp; '
+            output += f'<strong>正常值：</strong>{config_info.get("normal_value", "-")} &nbsp; '
+            output += f'<strong>规则模式：</strong>{config_info.get("rule_pattern", "-")}</p>'
+            output += '</div>'
+
+        ordered_items = []
+        seen = set()
+        for col in column_order:
+            if col in input_data_dict and col not in seen:
+                ordered_items.append((col, input_data_dict[col]))
+                seen.add(col)
+        for col, value in input_data_dict.items():
+            if col not in seen:
+                ordered_items.append((col, value))
+                seen.add(col)
+
         output += '<p style="font-size: 10.5pt; font-weight: bold; color: #34495e; margin-top: 12px;">📊 输入数据：</p>'
         output += '<table style="width: 100%; border-collapse: collapse; margin-top: 8px;">'
-        
-        # 中文映射
-        field_names = {
-            'timestamp': '⏰ 时间戳',
-            'device_id': '🛠️ 设备ID',
-            'department': '🏢 部门',
-            'temp': '🌡️ 温度',
-            'vibration': '📡 振动',
-            'oil_pressure': '🛢️ 油压',
-            'voltage': '⚡ 电压',
-            'rpm': '♻️ 转速'
-        }
-        
-        for key, value in input_data_dict.items():
-            display_name = field_names.get(key, key)
-            output += f'<tr style="border-bottom: 1px solid #ecf0f1;">'
+        for key, value in ordered_items:
+            display_name = feature_names.get(key, key)
+            output += '<tr style="border-bottom: 1px solid #ecf0f1;">'
             output += f'<td style="padding: 6px; font-weight: bold; color: #7f8c8d; width: 40%;">{display_name}</td>'
             output += f'<td style="padding: 6px; color: #2c3e50;">{value}</td>'
             output += '</tr>'
-        
         output += '</table>'
-        
-        # 预测结果 - 根据结果类型选择颜色
-        if prediction_result == "正常运行":
-            # 正常运行用绿色
+
+        if predicted_status == "正常运行":
             result_color = "#27ae60"
             result_bg_color = "#d5f4e6"
             result_border_color = "#2ecc71"
             result_icon = "🟢"
         else:
-            # 异常情况用红色
             result_color = "#e74c3c"
             result_bg_color = "#fef5e7"
             result_border_color = "#f39c12"
             result_icon = "🔴"
-        
-        # 检查最高概率是否低于阈值
-        max_prob = max(probability_dist.values()) if probability_dist else 0
-        confidence_threshold = 0.6
-        
-        if max_prob < confidence_threshold:
-            # 低置信度提示
-            output += f'<div style="margin-top: 15px; padding: 10px; background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 5px; color: #856404;">'
-            output += f'⚠️ <strong>低置信度警告</strong>：最高概率仅为 {max_prob:.1%}，预测结果可能不够可靠'
-            output += '</div>'
-        
-        output += f'<p style="font-size: 12pt; font-weight: bold; color: {result_color}; margin-top: 15px; padding: 12px; background-color: {result_bg_color}; border-left: 5px solid {result_border_color}; border-radius: 5px;">{result_icon} 预测故障类型：<span style="color: {result_color}; font-size: 13pt;">{prediction_result}</span></p>'
-        
-        # 故障处理建议
-        suggestions = {
-            "散热系统故障": [
-                "检查散热风扇是否运转正常或损坏。",
-                "清理或检查通风管道是否堵塞或漏气。"
-            ],
-            "润滑系统异常": [
-                "检查润滑油位是否不足或变质。",
-                "确认润滑泵及管路是否堵塞或泄漏。"
-            ],
-            "传动系统异常": [
-                "检查传动皮带、链条或齿轮是否磨损或松动。",
-                "确认对中是否偏移，轴承是否过热或异响。"
-            ],
-            "电力供应故障": [
-                "检查电源线路、接线端子是否松动或烧蚀。",
-                "测试电压是否稳定，排查断路器或保险是否跳闸/熔断。"
-            ],
-            "正常运行": [
-                "暂无建议/继续观察使用"
-            ]
-        }
-        
-        suggestion_list = suggestions.get(prediction_result, [])
-        
-        if suggestion_list:
-            output += '<div style="margin-top: 15px; padding: 12px; background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 5px;">'
-            output += '<p style="font-size: 10.5pt; font-weight: bold; color: #34495e; margin-bottom: 8px;">📝 故障处理建议：</p>'
-            output += '<ul style="margin-left: 20px; padding-left: 0;">'
-            for suggestion in suggestion_list:
-                output += f'<li style="font-size: 9.5pt; color: #2c3e50; margin-bottom: 5px;">{suggestion}</li>'
-            output += '</ul>'
+
+        output += (
+            f'<p style="font-size: 12pt; font-weight: bold; color: {result_color}; margin-top: 15px; padding: 12px; '
+            f'background-color: {result_bg_color}; border-left: 5px solid {result_border_color}; border-radius: 5px;">'
+            f'{result_icon} 预测故障类型：<span style="color: {result_color}; font-size: 13pt;">{predicted_status}</span></p>'
+        )
+
+        if key_parameters:
+            output += '<div style="margin-top: 10px; padding: 10px; background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 5px;">'
+            output += f'<p style="margin: 0; color: #34495e;"><strong>重点关注参数：</strong>{key_parameters}</p>'
             output += '</div>'
 
-        # 概率分布显示
-        output += '<div style="margin-top: 15px;">'
-        output += '<p style="font-size: 10.5pt; font-weight: bold; color: #34495e; margin-bottom: 8px;">📈 故障类型概率分布：</p>'
-        output += '<div style="background-color: #f8f9fa; padding: 10px; border-radius: 5px; border: 1px solid #e9ecef;">'
-        
-        for i, (fault_type, prob) in enumerate(probability_dist.items()):
-            # 根据概率大小选择颜色
-            if prob > 0.5:
-                bar_color = "#28a745"  # 绿色
-            elif prob > 0.3:
-                bar_color = "#ffc107"  # 黄色
-            else:
-                bar_color = "#dc3545"  # 红色
-            
-            # 概率条
-            bar_width = prob * 100
-            
-            # 格式化概率显示：统一显示8位小数，不使用科学计数法
-            prob_text = f'{prob * 100:.8f}%'
-            
-            output += f'<div style="margin-bottom: 6px;">'
-            output += f'<div style="display: flex; align-items: center; margin-bottom: 3px;">'
-            output += f'<span style="font-size: 9pt; color: #2c3e50; width: 120px; display: inline-block;">{fault_type}</span>'
-            output += f'<span style="font-size: 9pt; color: #495057; margin-left: 8px; min-width: 80px;">{prob_text}</span>'
-            output += f'</div>'
-            output += f'<div style="background-color: #e9ecef; height: 8px; border-radius: 4px; overflow: hidden;">'
-            output += f'<div style="background-color: {bar_color}; height: 100%; width: {bar_width}%; transition: width 0.3s ease;"></div>'
-            output += f'</div>'
-            output += f'</div>'
-        
-        output += '</div>'
-        output += '</div>'
+        if probability_items:
+            output += '<div style="margin-top: 15px;">'
+            output += '<p style="font-size: 10.5pt; font-weight: bold; color: #34495e; margin-bottom: 8px;">📈 故障类型概率分布：</p>'
+            output += '<div style="background-color: #f8f9fa; padding: 10px; border-radius: 5px; border: 1px solid #e9ecef;">'
+            for fault_type, prob in probability_items:
+                if not isinstance(prob, (int, float)):
+                    continue
+                if prob > 0.5:
+                    bar_color = "#28a745"
+                elif prob > 0.3:
+                    bar_color = "#ffc107"
+                else:
+                    bar_color = "#dc3545"
+                bar_width = prob * 100
+                prob_text = f'{prob * 100:.2f}%'
+                output += '<div style="margin-bottom: 6px;">'
+                output += '<div style="display: flex; align-items: center; margin-bottom: 3px;">'
+                output += f'<span style="font-size: 9pt; color: #2c3e50; width: 120px; display: inline-block;">{fault_type}</span>'
+                output += f'<span style="font-size: 9pt; color: #495057; margin-left: 8px; min-width: 80px;">{prob_text}</span>'
+                output += '</div>'
+                output += '<div style="background-color: #e9ecef; height: 8px; border-radius: 4px; overflow: hidden;">'
+                output += f'<div style="background-color: {bar_color}; height: 100%; width: {bar_width}%; transition: width 0.3s ease;"></div>'
+                output += '</div>'
+                output += '</div>'
+            output += '</div>'
+            output += '</div>'
+
+        if report_error:
+            output += f'<p style="color: #e74c3c;">⚠️ 读取 {os.path.basename(report_path)} 时出错: {self._escape_html(report_error)}</p>'
+        elif report_text:
+            output += '<div style="margin-top: 20px;">'
+            output += '<p style="font-size: 10.5pt; font-weight: bold; color: #2c3e50;">📄 模型原始报告</p>'
+            output += '<pre style="white-space: pre-wrap; word-break: break-word; background: #f7f9fb; padding: 12px; border-radius: 6px; border: 1px solid #dfe6ef;">'
+            output += self._escape_html(report_text)
+            output += '</pre></div>'
+        else:
+            output += f'<p style="color: #999; margin-top: 12px;">未找到 {os.path.basename(report_path)}，已展示实时预测结果。</p>'
+
         output += '</div>'
 
         self._parent.textEdit_solely.setHtml(output)
@@ -281,3 +271,244 @@ class PageFourHandler(QObject):
             # 隐藏进度条
             if hasattr(self._parent, 'progressBar'):
                 self._parent.progressBar.setVisible(False)
+
+    def _read_single_report_text(self):
+        report_path = os.path.join(RESULT_DIR, "single_prediction_report.txt")
+        if not os.path.exists(report_path):
+            return None, None, report_path
+        try:
+            with open(report_path, 'r', encoding='utf-8') as f:
+                return f.read(), None, report_path
+        except Exception as exc:
+            return None, str(exc), report_path
+
+    def _parse_single_report(self, report_text: str):
+        data = {
+            'predicted_status': None,
+            'key_parameters': '',
+            'probabilities': []
+        }
+        if not report_text:
+            return data
+
+        lines = report_text.splitlines()
+        reading_probs = False
+
+        for line in lines:
+            stripped = line.strip()
+            if not stripped:
+                if reading_probs:
+                    reading_probs = False
+                continue
+            if stripped.startswith("最可能的状态是"):
+                match = re.search(r"最可能的状态是:\s*(.+?)，概率为\s*([0-9.]+)", stripped)
+                if match:
+                    data['predicted_status'] = match.group(1).strip()
+                continue
+            if stripped.startswith("需要特别关注的参数为"):
+                parts = stripped.split(":", 1)
+                if len(parts) == 2:
+                    data['key_parameters'] = parts[1].strip()
+                continue
+            if "各状态的预测概率" in stripped:
+                reading_probs = True
+                continue
+            if reading_probs:
+                cleaned = stripped.lstrip("•-*→🎯").strip()
+                match = re.match(r"(.+?):\s*([0-9.]+)", cleaned)
+                if match:
+                    label = match.group(1).strip()
+                    prob = float(match.group(2))
+                    data['probabilities'].append((label, prob))
+                    continue
+
+        return data
+
+    def _get_dataset_config_info(self):
+        """优先使用已缓存配置，缺失时回退到分箱配置文件"""
+        main_window = self._parent.window()
+        config_info = getattr(main_window, "dataset_config_info", None)
+        if config_info:
+            return config_info
+
+        disk_info = self._load_dataset_config_from_disk()
+        if disk_info:
+            setattr(main_window, "dataset_config_info", disk_info)
+        return disk_info
+
+    def _load_dataset_config_from_disk(self):
+        """从 Apriori 分箱配置文件载入列信息"""
+        config_path = os.path.join(os.getcwd(), "Bayesian_1130", "Apriori", "分箱配置.json")
+        if not os.path.exists(config_path):
+            return None
+        try:
+            with open(config_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+        except Exception:
+            return None
+
+        metadata = data.get('metadata', {})
+        dataset_config = metadata.get('dataset_config') or data.get('dataset_config') or {}
+        column_stats = metadata.get('column_stats') or data.get('column_stats') or {}
+        rule_config = metadata.get('rule_config') or data.get('rule_config') or {}
+
+        return {
+            'dataset_config': dataset_config,
+            'column_stats': column_stats,
+            'categorical_cols': dataset_config.get('categorical_cols', []),
+            'numerical_cols': dataset_config.get('numerical_cols', []),
+            'target_col': dataset_config.get('target_col'),
+            'normal_value': dataset_config.get('normal_value'),
+            'rule_pattern': rule_config.get('rule_pattern'),
+        }
+
+
+
+class SinglePredictionDialog(QDialog):
+    """根据 Page1 配置动态生成的单次预测输入弹窗"""
+
+    def __init__(self, parent=None, dataset_config_info=None, initial_data=None):
+        super().__init__(parent)
+        self.setWindowTitle("单次质量评估")
+        self.setModal(True)
+        self.resize(480, 520)
+        self.setMinimumWidth(420)
+
+        self.dataset_config_info = dataset_config_info or {}
+        self.dataset_config = self.dataset_config_info.get('dataset_config') or {}
+        self.column_stats = self.dataset_config_info.get('column_stats') or {}
+        self.feature_names = self.dataset_config.get('feature_names') or {}
+        self.numerical_cols = (
+            self.dataset_config.get('numerical_cols')
+            or self.dataset_config_info.get('numerical_cols')
+            or []
+        )
+        self.categorical_cols = (
+            self.dataset_config.get('categorical_cols')
+            or self.dataset_config_info.get('categorical_cols')
+            or []
+        )
+        self.target_col = self.dataset_config.get('target_col') or self.dataset_config_info.get('target_col')
+        self.normal_value = self.dataset_config.get('normal_value') or self.dataset_config_info.get('normal_value')
+
+        self.categorical_inputs = {}
+        self.numeric_inputs = {}
+        self.initial_data = initial_data or {}
+
+        self._build_ui()
+
+    def _build_ui(self):
+        layout = QVBoxLayout(self)
+
+        intro = QLabel("请按照数据导入页面中选择的列填写本次评估数据。")
+        intro.setWordWrap(True)
+        layout.addWidget(intro)
+
+        if self.target_col:
+            summary = QLabel(
+                f"<b>目标列</b>：{self.target_col}&nbsp;&nbsp;"
+                f"<b>正常值</b>：{self.normal_value or '-'}&nbsp;&nbsp;"
+                f"<b>规则模式</b>：{self.dataset_config_info.get('rule_pattern', '-')}"
+            )
+            summary.setWordWrap(True)
+            layout.addWidget(summary)
+
+        scroll = QScrollArea(self)
+        scroll.setWidgetResizable(True)
+        container = QWidget()
+        self.form_layout = QFormLayout(container)
+        scroll.setWidget(container)
+        layout.addWidget(scroll)
+
+        if not self.categorical_cols and not self.numerical_cols:
+            placeholder = QLabel("暂未获取到可填写的列，请先在 Page1 完成数据集配置。")
+            placeholder.setWordWrap(True)
+            self.form_layout.addRow(placeholder)
+        else:
+            for col in self.categorical_cols:
+                combo = self._create_category_field(col)
+                self.form_layout.addRow(self._format_label(col, is_categorical=True), combo)
+                self.categorical_inputs[col] = combo
+
+            for col in self.numerical_cols:
+                spin = self._create_numeric_field(col)
+                self.form_layout.addRow(self._format_label(col, is_categorical=False), spin)
+                self.numeric_inputs[col] = spin
+
+        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel, self)
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
+
+    def _format_label(self, column: str, is_categorical: bool) -> str:
+        friendly = self.feature_names.get(column, column)
+        if friendly and friendly != column:
+            base = f"{friendly}（{column}）"
+        else:
+            base = column
+        suffix = "（分类）" if is_categorical else "（数值）"
+        return f"{base}{suffix}"
+
+    @staticmethod
+    def _natural_sort(values):
+        import re
+
+        def sort_key(value):
+            text = str(value)
+            match = re.search(r"(\\d+)", text)
+            if not match:
+                return (1, text)
+            return (0, int(match.group(1)), text)
+
+        return sorted(values, key=sort_key)
+
+    def _create_category_field(self, column: str) -> QComboBox:
+        combo = QComboBox(self)
+        stats = self.column_stats.get('categorical', {}).get(column, {})
+        values = stats.get('values', [])
+        if values:
+            sorted_values = self._natural_sort(values)
+            combo.addItems([str(v) for v in sorted_values])
+        combo.setEditable(True)
+        combo.setPlaceholderText("输入或选择可用的分类值")
+        if column in self.initial_data:
+            preset = str(self.initial_data[column])
+            idx = combo.findText(preset)
+            if idx >= 0:
+                combo.setCurrentIndex(idx)
+            else:
+                combo.setEditText(preset)
+        return combo
+
+    def _create_numeric_field(self, column: str) -> QDoubleSpinBox:
+        spin = QDoubleSpinBox(self)
+        spin.setDecimals(4)
+        stats = self.column_stats.get('numerical', {}).get(column, {})
+        min_val = stats.get('min')
+        max_val = stats.get('max')
+        spin.setRange(-1e9, 1e9)
+        span = (max_val - min_val) if (min_val is not None and max_val is not None) else 1.0
+        span = abs(span) if span != 0 else 1.0
+        spin.setSingleStep(max(span / 100.0, 0.01))
+        if min_val is not None and max_val is not None:
+            spin.setToolTip(f"建议范围: {min_val:.4f} ~ {max_val:.4f}")
+        default = stats.get('default')
+        if column in self.initial_data:
+            default = float(self.initial_data[column])
+        elif default is None:
+            if min_val is not None and max_val is not None:
+                default = (min_val + max_val) / 2
+            else:
+                default = 0.0
+        spin.setValue(default)
+        return spin
+
+    def get_data(self) -> dict:
+        data = {}
+        for col, widget in self.categorical_inputs.items():
+            data[col] = widget.currentText().strip()
+        for col, widget in self.numeric_inputs.items():
+            data[col] = float(widget.value())
+        if self.target_col and self.normal_value and self.target_col not in data:
+            data[self.target_col] = self.normal_value
+        return data

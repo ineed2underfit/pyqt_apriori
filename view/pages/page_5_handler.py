@@ -68,109 +68,210 @@ class Page5Handler(QObject):
         super().__init__(parent)
         # Handler 通过 parent 参数持有 View 引用
         self._parent = parent
+        self._current_dataset_path = None
+        self._cached_device_col = None
+        self._cached_target_col = None
+        self._cached_normal_value = None
 
     def query_fault_records(self):
         """查询设备故障记录"""
         try:
-            # 1. 获取选择的设备ID
-            selected_device = self._parent.comboBox.currentText()
-            
+            dataset_path = self._get_page4_dataset_path()
+            if not dataset_path:
+                return
+
+            df = pd.read_csv(dataset_path)
+            device_col, target_col, normal_value = self._detect_columns(df)
+            if not device_col or not target_col:
+                return
+
+            if dataset_path != self._current_dataset_path:
+                self._populate_device_options(df, device_col)
+                self._current_dataset_path = dataset_path
+
+            selected_device = self._parent.comboBox.currentText().strip()
             if not selected_device:
                 show_dialog(self._parent, '请先选择设备型号', '提示')
                 return
-            
-            # 2. 获取数据集路径（从 MainWindow）
-            main_window = self._parent.window()
-            dataset_path = main_window.dataset_path
-            
-            if not dataset_path or not os.path.exists(dataset_path):
-                show_dialog(self._parent, '数据集未导入或文件不存在，请先在 Page 1 中导入数据集。', '错误')
-                return
-            
-            # 3. 读取数据集
-            df = pd.read_csv(dataset_path)
-            
-            # 4. 检查必要的列是否存在
-            required_columns = ['device_id', '故障类型']
-            missing_columns = [col for col in required_columns if col not in df.columns]
-            
-            if missing_columns:
-                show_dialog(self._parent, f'数据集缺少必要的列: {", ".join(missing_columns)}', '错误')
-                return
-            
-            # 5. 筛选数据：设备ID匹配 且 故障类型不是"正常运行"
+
             fault_records = df[
-                (df['device_id'] == selected_device) & 
-                (df['故障类型'] != '正常运行')
+                (df[device_col].astype(str) == selected_device) &
+                (df[target_col] != normal_value)
             ]
-            
-            # 6. 按时间排序（如果有 timestamp 列）
+
             if 'timestamp' in fault_records.columns:
                 fault_records = fault_records.sort_values('timestamp', ascending=False)
-            
-            # 7. 检查是否有故障记录
+
             if fault_records.empty:
                 output_html = self._format_no_fault_message(selected_device)
                 self._parent.textEdit.setHtml(output_html)
                 return
-            
-            # 8. 格式化输出
-            output_html = self._format_fault_records_table(selected_device, fault_records)
-            
-            # 9. 显示结果
+
+            output_html = self._format_fault_records_table(
+                selected_device,
+                fault_records,
+                target_col=target_col,
+                normal_value=normal_value,
+                device_col=device_col
+            )
             self._parent.textEdit.setHtml(output_html)
-            
+
         except Exception as e:
             show_dialog(self._parent, f'查询故障记录时出错: {str(e)}', '错误')
             import traceback
             traceback.print_exc()
-    
+
+    def _get_page4_dataset_path(self):
+        """获取 Page4 已导入的测试集路径"""
+        main_window = self._parent.window()
+        page4 = getattr(main_window, 'page4', None)
+        handler = getattr(page4, 'handler', None) if page4 else None
+        dataset_path = getattr(handler, 'test_data_path', None) if handler else None
+
+        if not dataset_path:
+            show_dialog(self._parent, '请先在 Page4 导入测试数据并完成质量评估', '提示')
+            return None
+
+        if not os.path.exists(dataset_path):
+            show_dialog(self._parent, '测试数据文件不存在，请重新导入', '错误')
+            return None
+
+        return dataset_path
+
+    def _detect_columns(self, df):
+        """结合配置与列名，识别设备列、目标列以及正常值"""
+        main_window = self._parent.window()
+        dataset_info = getattr(main_window, 'dataset_config_info', {}) or {}
+
+        dataset_config = {}
+        if isinstance(dataset_info, dict):
+            dataset_config = dataset_info.get('dataset_config') or dataset_info
+        if not isinstance(dataset_config, dict):
+            dataset_config = {}
+
+        target_candidates = []
+        for key in ('target_col', 'target_column', 'target', 'target_field'):
+            value = dataset_config.get(key)
+            if value:
+                target_candidates.append(value)
+
+        target_col = next((c for c in target_candidates if c in df.columns), None)
+        if not target_col:
+            fallback_target = ['status', '故障类型', '目标列']
+            target_col = next((c for c in fallback_target if c in df.columns), None)
+
+        if not target_col:
+            show_dialog(self._parent, '无法识别故障标签列，请检查数据配置', '错误')
+            return None, None, None
+
+        normal_value = (
+            dataset_config.get('normal_value') or
+            dataset_config.get('normal_label') or
+            dataset_config.get('normal_state') or
+            '正常运行'
+        )
+
+        categorical_cols = dataset_config.get('categorical_columns') or dataset_config.get('categorical_cols')
+        if isinstance(categorical_cols, str):
+            categorical_cols = [item.strip() for item in categorical_cols.split(',') if item.strip()]
+        categorical_cols = categorical_cols or []
+
+        id_cols = dataset_config.get('id_cols') or []
+        if isinstance(id_cols, str):
+            id_cols = [item.strip() for item in id_cols.split(',') if item.strip()]
+
+        device_candidates = []
+        for key in ('device_column', 'device_col', 'device_field'):
+            value = dataset_config.get(key)
+            if value:
+                device_candidates.append(value)
+        device_candidates.extend(id_cols)
+        device_candidates.extend(categorical_cols)
+
+        device_col = self._select_device_column(df, device_candidates)
+        if not device_col:
+            show_dialog(self._parent, '无法识别设备列，请检查数据配置', '错误')
+            return None, None, None
+
+        self._cached_device_col = device_col
+        self._cached_target_col = target_col
+        self._cached_normal_value = normal_value
+        return device_col, target_col, normal_value
+
+    def _populate_device_options(self, df, device_col):
+        """按照自然排序刷新下拉框"""
+        values = (
+            df[device_col]
+            .dropna()
+            .astype(str)
+            .unique()
+            .tolist()
+        )
+        values = sorted(values, key=self._natural_sort_key)
+
+        self._parent.comboBox.blockSignals(True)
+        self._parent.comboBox.clear()
+        self._parent.comboBox.addItems(values)
+        self._parent.comboBox.blockSignals(False)
+
+    def _natural_sort_key(self, value: str):
+        import re
+
+        def convert(text):
+            return int(text) if text.isdigit() else text.lower()
+
+        return [convert(c) for c in re.split(r'(\d+)', value)]
+
+    def _select_device_column(self, df, preferred_candidates):
+        """根据优先级挑选设备列，默认为“设备名称”或“device_id”"""
+        ordered = []
+        for candidate in preferred_candidates or []:
+            if candidate and candidate not in ordered:
+                ordered.append(candidate)
+        for fallback in ('设备名称', 'device_id'):
+            if fallback not in ordered:
+                ordered.append(fallback)
+
+        for column in ordered:
+            if column in df.columns:
+                return column
+        return None
+
     def _format_no_fault_message(self, device_id):
-        """格式化无故障记录的消息"""
-        html = '<div style="font-size: 10pt; line-height: 1.6; font-family: Arial, sans-serif; padding: 20px;">'        
-        
-        # 无故障提示
-        html += '<div style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); padding: 30px; border-radius: 8px; text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">'        
-        html += '<div style="font-size: 48pt; margin-bottom: 15px;">✅</div>'
-        html += f'<h3 style="margin: 0 0 10px 0; color: #27ae60; font-size: 12pt;">设备运行正常</h3>'
-        html += f'<p style="margin: 0; color: #34495e; font-size: 10pt;">设备 <strong>{device_id}</strong> 没有故障记录</p>'
-        html += '<p style="margin: 10px 0 0 0; color: #7f8c8d; font-size: 9pt;">所有记录均为正常运行状态</p>'
+        """格式化无故障记录的展示信息"""
+        html = '<div style="font-size: 10pt; line-height: 1.6; font-family: Arial, sans-serif; padding: 20px;">'
+        html += '<div style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); padding: 30px; border-radius: 8px; text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">'
+        html += '<div style="font-size: 40pt; margin-bottom: 15px;">✔</div>'
+        html += '<h3 style="margin: 0 0 10px 0; color: #27ae60; font-size: 12pt;">设备运行正常</h3>'
+        html += f'<p style="margin: 0; color: #34495e; font-size: 10pt;">设备 <strong>{device_id}</strong> 暂无异常记录</p>'
+        html += '<p style="margin: 10px 0 0 0; color: #7f8c8d; font-size: 9pt;">所有监测项均处于安全范围</p>'
         html += '</div>'
-        
         html += '</div>'
         return html
-    
-    def _format_fault_records_table(self, device_id, fault_records):
-        """格式化故障记录为表格形式的 HTML（参考 Page 2 样式）"""
+
+    def _format_fault_records_table(self, device_id, fault_records, target_col, normal_value, device_col):
+        """格式化故障记录为 HTML 表格"""
         record_count = len(fault_records)
-        
-        # 统计故障类型分布
-        fault_type_counts = fault_records['故障类型'].value_counts()
-        
-        # 开始构建 HTML（参考 Page 2 的样式）
+        fault_type_counts = fault_records[target_col].value_counts()
+
         html = '<div style="font-size: 10pt; line-height: 1.6; font-family: Arial, sans-serif;">'
-        
-        # 统计信息（参考 Page 2 的渐变背景）
-        html += '<div style="margin-bottom: 15px; padding: 12px; background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); border-radius: 6px;">'        
-        html += '<h3 style="margin: 0 0 8px 0; color: #2c3e50; font-size: 10pt;">📊 故障类型分布</h3>'
-        html += '<ul style="margin: 5px 0; padding-left: 25px; color: #34495e;">'        
+        html += '<div style="margin-bottom: 15px; padding: 12px; background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); border-radius: 6px;">'
+        html += '<h3 style="margin: 0 0 8px 0; color: #2c3e50; font-size: 10pt;">⚠ 故障类型分布</h3>'
+        html += '<ul style="margin: 5px 0; padding-left: 25px; color: #34495e;">'
         for fault_type, count in fault_type_counts.items():
             percentage = (count / record_count) * 100
             html += f'<li style="margin: 3px 0;"><strong>{fault_type}</strong>: {count} 条 ({percentage:.1f}%)</li>'
         html += '</ul>'
         html += '</div>'
-        
-        # 详细记录表格（参考 Page 2 的表格样式）
-        html += '<h3 style="margin: 15px 0 10px 0; color: #2c3e50; font-size: 10pt;">📝 详细故障记录</h3>'
-        
-        # 确定要显示的列
+
+        html += '<h3 style="margin: 15px 0 10px 0; color: #2c3e50; font-size: 10pt;">📋 详细故障记录</h3>'
+
         display_columns = []
-        optional_columns = ['timestamp', 'device_id', 'department', 'temp', 'vibration', 'oil_pressure', 'voltage', 'rpm', '故障类型']
+        optional_columns = ['timestamp', device_col, 'department', 'temp', 'vibration', 'oil_pressure', 'voltage', 'rpm', target_col]
         for col in optional_columns:
-            if col in fault_records.columns:
+            if col in fault_records.columns and col not in display_columns:
                 display_columns.append(col)
-        
-        # 中文列名映射
+
         column_names = {
             'timestamp': '时间',
             'device_id': '设备ID',
@@ -180,65 +281,47 @@ class Page5Handler(QObject):
             'oil_pressure': '油压',
             'voltage': '电压(V)',
             'rpm': '转速(RPM)',
-            '故障类型': '故障类型'
         }
-        
-        # 创建表格（参考 Page 2 的表格样式）
-        html += '<table style="width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">'        
-        
-        # 表头（参考 Page 2 的渐变背景）
-        html += '<thead style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: #2c3e50;">'        
+        column_names[device_col] = column_names.get(device_col, device_col)
+        column_names[target_col] = column_names.get(target_col, target_col)
+
+        html += '<div style="background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">'
+        html += '<table style="width: 100%; border-collapse: collapse;">'
+        html += '<thead style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: #2c3e50;">'
         html += '<tr>'
         for col in display_columns:
-            display_name = column_names.get(col, col)
-            html += f'<th style="padding: 10px 8px; text-align: left; font-weight: bold; font-size: 9pt;">{display_name}</th>'
+            name = column_names.get(col, col)
+            html += f'<th style="padding: 10px 8px; text-align: left; font-weight: bold; font-size: 9pt;">{name}</th>'
         html += '</tr>'
         html += '</thead>'
-        
-        # 表格内容
+
         html += '<tbody>'
         for idx, (_, row) in enumerate(fault_records.iterrows()):
-            # 交替行颜色（参考 Page 2）
-            row_style = "background-color: #f8f9fa;" if idx % 2 == 0 else "background-color: white;"
-            html += f'<tr style="{row_style}">'            
-            
+            row_style = 'background-color: #f8f9fa;' if idx % 2 == 0 else 'background-color: white;'
+            html += f'<tr style="{row_style}">'
             for col in display_columns:
                 value = row[col]
-                
-                # 格式化数值
-                if col in ['temp', 'vibration', 'oil_pressure', 'voltage', 'rpm']:
+                if col in {'temp', 'vibration', 'oil_pressure', 'voltage', 'rpm'}:
                     try:
                         value = f'{float(value):.2f}'
-                    except:
+                    except Exception:
                         pass
-                
-                # 故障类型高亮显示
-                if col == '故障类型':
-                    # 根据故障类型选择颜色
-                    if '散热' in str(value):
-                        color = '#e74c3c'  # 红色
-                    elif '传动' in str(value):
-                        color = '#f39c12'  # 橙色
-                    elif '润滑' in str(value):
-                        color = '#3498db'  # 蓝色
-                    elif '电力' in str(value):
-                        color = '#9b59b6'  # 紫色
-                    else:
-                        color = '#34495e'
-                    html += f'<td style="padding: 10px 8px; font-weight: bold; color: {color};">{value}</td>'
+
+                if col == target_col:
+                    html += f'<td style="padding: 10px 8px; font-weight: bold; color: #e74c3c;">{value}</td>'
                 else:
                     html += f'<td style="padding: 10px 8px; color: #2c3e50;">{value}</td>'
-            
             html += '</tr>'
-        
         html += '</tbody>'
         html += '</table>'
-        
         html += '</div>'
+
+        html += '<p style="margin-top: 10px; color: #7f8c8d; font-size: 9pt;">'
+        html += f'共 {record_count} 条记录，展示设备 <strong>{device_id}</strong> 的异常历史（标准状态：{normal_value}）。'
+        html += '</p>'
         html += '</div>'
-        
         return html
-    
+
     def do_something(self):
         pass
         show_dialog(self._parent, 'do something')
@@ -388,5 +471,3 @@ class Page5Handler(QObject):
     #     elif msg_box.clickedButton() == reject_button:
     #         # 用户点击了拒绝按钮，直接关闭对话框（什么都不做）
     #         pass
-
-

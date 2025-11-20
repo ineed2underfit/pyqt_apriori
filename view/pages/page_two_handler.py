@@ -1,3 +1,5 @@
+import os
+import shutil
 from PySide6.QtCore import QObject, QThread, Signal
 from components.log_dialog import LogDialog
 from workers.apriori_worker import AprioriWorker
@@ -91,6 +93,7 @@ class PageTwoHandler(QObject):
             output = self._format_rules_html(results_df, "初始规则提取完成")
             self._parent.textEdit_3.setHtml(output)
             self._parent.textEdit_3.verticalScrollBar().setValue(0)
+            self._sync_binning_config()
         except Exception as exc:
             self._parent.on_common_error(f"处理结果时出错: {exc}")
 
@@ -106,7 +109,7 @@ class PageTwoHandler(QObject):
         self.thread = None
         self.worker = None
         if self.log_dialog:
-            self.log_dialog.close()
+            self.log_dialog.append_log("=== 规则挖掘流程已结束，日志窗口可手动关闭 ===")
             self.log_dialog = None
         if self._parent:
             self._parent.pushButton_extract.setEnabled(True)
@@ -133,10 +136,14 @@ class PageTwoHandler(QObject):
             self._parent.update_progress(90, message)
 
     def _format_rules_html(self, rules_df, title):
+        total_rules = len(rules_df)
+        preview_limit = min(1000, total_rules)
+        preview_df = rules_df.head(preview_limit)
+
         html = '<div style="font-size: 10pt; line-height: 1.6; font-family: Arial, sans-serif;">'
         html += '<div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #2c3e50; padding: 12px; border-radius: 6px; margin-bottom: 15px; text-align: left;">'
         html += f'<h2 style="margin: 0; font-size: 12pt; font-weight: bold;">📊 {title}</h2>'
-        html += f'<p style="margin: 5px 0 0 0; font-size: 9pt; color: #34495e;">共发现 {len(rules_df)} 条规则</p>'
+        html += f'<p style="margin: 5px 0 0 0; font-size: 9pt; color: #34495e;">共发现 {total_rules:,} 条规则，仅展示前 {preview_limit:,} 条作为预览</p>'
         html += '</div>'
 
         html += '<table style="width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">'
@@ -147,7 +154,7 @@ class PageTwoHandler(QObject):
         html += '</tr>'
         html += '</thead><tbody>'
 
-        for idx, row in rules_df.iterrows():
+        for idx, row in preview_df.iterrows():
             row_style = "background-color: #f8f9fa;" if idx % 2 == 0 else "background-color: white;"
             html += f'<tr style="{row_style}">'
             for col in rules_df.columns:
@@ -164,15 +171,38 @@ class PageTwoHandler(QObject):
             html += '</tr>'
         html += '</tbody></table>'
 
-        if len(rules_df) > 0:
+        if len(preview_df) > 0:
             html += '<div style="margin-top: 15px; padding: 12px; background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); border-radius: 6px;">'
             if '支持度' in rules_df.columns:
-                html += f'<p style="margin: 5px 0; color: #34495e;"><strong>平均支持度</strong> {rules_df["支持度"].mean():.3f}</p>'
+                html += f'<p style="margin: 5px 0; color: #34495e;"><strong>平均支持度</strong> {preview_df["支持度"].mean():.3f}</p>'
             if '置信度' in rules_df.columns:
-                html += f'<p style="margin: 5px 0; color: #34495e;"><strong>平均置信度</strong> {rules_df["置信度"].mean():.3f}</p>'
+                html += f'<p style="margin: 5px 0; color: #34495e;"><strong>平均置信度</strong> {preview_df["置信度"].mean():.3f}</p>'
             if '提升度' in rules_df.columns:
-                html += f'<p style="margin: 5px 0; color: #34495e;"><strong>平均提升度</strong> {rules_df["提升度"].mean():.3f}</p>'
+                html += f'<p style="margin: 5px 0; color: #34495e;"><strong>平均提升度</strong> {preview_df["提升度"].mean():.3f}</p>'
+            html += '</div>'
+
+        if total_rules > preview_limit:
+            html += '<div style="margin-top: 15px; padding: 10px; background-color: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;">'
+            html += f'<p style="margin: 0; color: #856404; font-size: 9pt;">💡 <strong>提示</strong>: 规则总数 {total_rules:,} 条，仅显示前 {preview_limit:,} 条，以避免界面卡顿。</p>'
             html += '</div>'
 
         html += '</div>'
         return html
+
+    def _sync_binning_config(self):
+        """将最新分箱配置同步到 Apriori 模块供 Page3/4 使用"""
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        result_dir = os.path.join(project_root, "Bayesian_1130", "result", "apriori_results")
+        comprehensive_src = os.path.join(result_dir, "完整数据配置.json")
+        basic_src = os.path.join(result_dir, "分箱配置.json")
+        if os.path.exists(comprehensive_src):
+            src = comprehensive_src
+        else:
+            src = basic_src
+        dst = os.path.join(project_root, "Bayesian_1130", "Apriori", "分箱配置.json")
+        if not os.path.exists(src):
+            return
+        try:
+            shutil.copy2(src, dst)
+        except Exception as exc:
+            show_dialog(self._parent, f"同步分箱配置失败: {exc}", "提示")

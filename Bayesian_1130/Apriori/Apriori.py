@@ -2,8 +2,9 @@ import pandas as pd
 import numpy as np
 from mlxtend.preprocessing import TransactionEncoder
 from mlxtend.frequent_patterns import apriori, association_rules
-import matplotlib.pyplot as plt
 import matplotlib as mpl
+mpl.use("Agg")  # 使用无界面后端，避免后台线程绘图报错
+import matplotlib.pyplot as plt
 import os
 import time
 from sklearn.cluster import KMeans
@@ -2377,6 +2378,8 @@ class EquipmentAnalyzer:
                 print(
                     f"注意: 格式化和去重过程中丢失了 {rules_lost} 条规则，这通常是由于多种原始规则组合映射到相同的文本表示")
 
+            self.save_top_rules_plot(result_df)
+
             return result_df
 
         except Exception as e:
@@ -2384,6 +2387,29 @@ class EquipmentAnalyzer:
             import traceback
             traceback.print_exc()
             return pd.DataFrame()
+
+    def save_top_rules_plot(self, result_df, top_n=10):
+        """根据结果数据生成提升度对比图"""
+        if result_df is None or result_df.empty:
+            return
+        try:
+            top_rules = result_df.head(min(top_n, len(result_df)))
+            if top_rules.empty:
+                return
+
+            plt.figure(figsize=(12, 8))
+            plt.barh(top_rules['规则'][::-1], top_rules['提升度'][::-1], color='skyblue')
+            plt.xlabel('提升度')
+            plt.ylabel('故障预测规则')
+            plt.title('设备故障预测规则分析 - 提升度排名')
+            plt.tight_layout()
+
+            image_path = os.path.join(self.get_result_dir(), "故障预测规则提升度.png")
+            plt.savefig(image_path, dpi=300, bbox_inches='tight')
+            plt.close()
+            print(f"已生成故障预测规则提升度图表，保存为'{image_path}'")
+        except Exception as exc:
+            print(f"警告: 无法生成故障预测规则提升度图表: {exc}")
 
 
 if __name__ == "__main__":
@@ -2531,21 +2557,6 @@ if __name__ == "__main__":
                 print()
 
             # 如果需要生成可视化图表
-            if len(results) > 0:
-                # 展示前10条规则的提升度对比
-                plt.figure(figsize=(12, 8))
-                top_rules = results.head(min(10, len(results)))
-                # 翻转以便最高的显示在顶部
-                plt.barh(top_rules['规则'][::-1], top_rules['提升度'][::-1], color='skyblue')
-                plt.xlabel('提升度')
-                plt.ylabel('故障预测规则')
-                plt.title('设备故障预测规则分析 - 提升度排名')
-                plt.tight_layout()
-
-                image_path = os.path.join(result_dir, "故障预测规则提升度.png")
-                plt.savefig(image_path, dpi=300, bbox_inches='tight')
-                plt.close()  # 关闭图表
-                print(f"已生成故障预测规则提升度图表，保存为'{image_path}'")
 
         # 输出总运行时间
         total_end_time = time.time()

@@ -53,7 +53,7 @@
         <double>0.001000000000000</double>
        </property>
        <property name="value">
-        <double>0.005000000000000</double>
+        <double>0.010000000000000</double>
        </property>
       </widget>
      </item>
@@ -72,7 +72,7 @@
         <double>0.010000000000000</double>
        </property>
        <property name="value">
-        <double>0.500000000000000</double>
+        <double>0.550000000000000</double>
        </property>
       </widget>
      </item>
@@ -187,9 +187,6 @@
    </item>
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout">
-     <item>
-      <layout class="QVBoxLayout" name="verticalLayout_2"/>
-     </item>
      <item>
       <layout class="QVBoxLayout" name="verticalLayout_3">
        <item>

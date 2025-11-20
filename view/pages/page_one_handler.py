@@ -102,6 +102,7 @@ class PageOneHandler(QObject):
             self._parent.pushButton_clean.setEnabled(True)
 
         if self._parent:
+            column_stats = self._collect_column_stats(prepared_df, selection)
             summary = {
                 'target_col': selection.target_col,
                 'normal_value': selection.normal_value,
@@ -110,7 +111,8 @@ class PageOneHandler(QObject):
                 'rule_pattern': selection.rule_pattern,
                 'all_columns': selection.all_columns,
                 'dataset_config': self.apriori_service.get_dataset_config() if self.apriori_service else None,
-                'rule_config': self.apriori_service.get_rule_config() if self.apriori_service else None
+                'rule_config': self.apriori_service.get_rule_config() if self.apriori_service else None,
+                'column_stats': column_stats
             }
             self._parent.emit_dataset_config(summary)
 
@@ -311,6 +313,42 @@ class PageOneHandler(QObject):
         html += '</div>'
 
         return html
+
+    def _collect_column_stats(self, dataframe: pd.DataFrame, selection: DatasetSelection) -> dict:
+        """收集列的可选值/范围，供其他页面动态构建输入控件"""
+        stats = {'numerical': {}, 'categorical': {}}
+
+        for col in selection.numerical_cols:
+            if col not in dataframe.columns:
+                continue
+            series = pd.to_numeric(dataframe[col], errors='coerce').dropna()
+            if series.empty:
+                continue
+            col_min = float(series.min())
+            col_max = float(series.max())
+            median = series.median()
+            default_value = float(median) if pd.notna(median) else float(series.mean())
+            stats['numerical'][col] = {
+                'min': col_min,
+                'max': col_max,
+                'mean': float(series.mean()),
+                'default': default_value,
+                'std': float(series.std(ddof=0)) if len(series) > 1 else 0.0
+            }
+
+        for col in selection.categorical_cols:
+            if col not in dataframe.columns:
+                continue
+            series = dataframe[col].dropna().astype(str)
+            if series.empty:
+                continue
+            values = list(dict.fromkeys(series.tolist()))
+            stats['categorical'][col] = {
+                'values': values,
+                'total_unique': int(series.nunique())
+            }
+
+        return stats
 
     def _on_load_error(self, error_message):
         """文件加载失败的回调函数"""

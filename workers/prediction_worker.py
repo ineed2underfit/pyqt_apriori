@@ -140,4 +140,48 @@ class PredictionWorker(QObject):
 
         prediction = predictions[0] if predictions else "未知"
         probs = prediction_probs[0] if prediction_probs else {}
+        try:
+            report_text = self._generate_single_report(prediction, probs, binning_config, data_dict)
+            report_path = os.path.join(RESULT_DIR, "single_prediction_report.txt")
+            with open(report_path, 'w', encoding='utf-8') as f:
+                f.write(report_text)
+        except Exception as exc:
+            if self.log_message:
+                self.log_message.emit(f"⚠️ 生成单次报告失败: {exc}")
         self.single_prediction_finished.emit(prediction, data_dict, probs)
+
+    def _generate_single_report(self, prediction, probs, binning_config, input_data):
+        target_info = binning_config.get("data_info", {}).get("target_info", {})
+        normal_value = target_info.get("normal_value", "")
+        network_rules_path = os.path.join(RESULT_DIR, "network_rules_with_mapping.json")
+        network_rules = []
+        if os.path.exists(network_rules_path):
+            try:
+                network_rules = predict_status_module.load_network_rules(network_rules_path)
+            except Exception:
+                network_rules = []
+        key_parameters = predict_status_module.get_key_parameters_for_status(prediction, network_rules)
+        key_params_str = "、".join(key_parameters) if key_parameters else "无"
+
+        sorted_probs = sorted(probs.items(), key=lambda x: x[1], reverse=True)
+        report_lines = [
+            "质量评价报告",
+            "===========================",
+            f"最可能的状态是: {prediction}，概率为{sorted_probs[0][1]:.4f}" if sorted_probs else f"最可能的状态是: {prediction}",
+            f"需要特别关注的参数为: {key_params_str}",
+            "",
+            "各状态的预测概率:"
+        ]
+        for status, prob in sorted_probs:
+            suffix = " (最高概率)" if status == prediction else ""
+            report_lines.append(f"  {status}: {prob:.4f}{suffix}")
+
+        report_lines.append("")
+        report_lines.append("输入数据:")
+        for key, value in input_data.items():
+            report_lines.append(f"  {key}: {value}")
+
+        if normal_value:
+            report_lines.append(f"\n正常状态参考值: {normal_value}")
+
+        return "\n".join(report_lines)

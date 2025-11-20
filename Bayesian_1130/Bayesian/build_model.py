@@ -479,7 +479,7 @@ def build_and_save_bayesian_model(data_filename: str, model_name: str = None):
     # 13. 验证目标变量
     if target_col in aligned_data.columns:
         status_values = sorted(aligned_data[target_col].unique())
-        print(f"📊 {target_col} 取值: {status_values}")
+        # print(f"📊 {target_col} 取值: {status_values}")
 
     return model_path
 
