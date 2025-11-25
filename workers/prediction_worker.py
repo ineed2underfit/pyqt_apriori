@@ -10,8 +10,10 @@ from PySide6.QtCore import QObject, Signal
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BAYESIAN_ROOT = os.path.join(PROJECT_ROOT, "Bayesian_1130")
 DATA_DIR = os.path.join(BAYESIAN_ROOT, "datas")
+APRIORI_RESULT_DIR = os.path.join(BAYESIAN_ROOT, "result", "apriori_results")
+COMPREHENSIVE_CONFIG_PATH = os.path.join(APRIORI_RESULT_DIR, "完整数据配置.json")
+BASIC_BINNING_PATH = os.path.join(APRIORI_RESULT_DIR, "分箱配置.json")
 RESULT_DIR = os.path.join(BAYESIAN_ROOT, "result", "bayesian_results")
-BINNING_CONFIG_PATH = os.path.join(BAYESIAN_ROOT, "Apriori", "分箱配置.json")
 DEFAULT_MODEL_PATH = os.path.join(BAYESIAN_ROOT, "Bayesian", "models", "final_bn_model.pkl")
 
 os.makedirs(DATA_DIR, exist_ok=True)
@@ -32,6 +34,17 @@ predict_status_module = _load_module(
     "bayesian_predict_status",
     os.path.join("Bayesian", "predict_status.py")
 )
+
+
+def _resolve_binning_config_path():
+    if os.path.exists(COMPREHENSIVE_CONFIG_PATH):
+        return COMPREHENSIVE_CONFIG_PATH
+    if os.path.exists(BASIC_BINNING_PATH):
+        return BASIC_BINNING_PATH
+    raise FileNotFoundError(
+        "未找到完整数据配置文件，请先在页面二完成规则挖掘: "
+        f"{COMPREHENSIVE_CONFIG_PATH}"
+    )
 
 
 class LogEmitter:
@@ -89,9 +102,10 @@ class PredictionWorker(QObject):
 
     def _run_batch(self, csv_path):
         self.progress_updated.emit(10)
+        binning_config_path = _resolve_binning_config_path()
         predict_status_module.MODEL_PATH = self.model_path
         predict_status_module.DATA_PATH = csv_path
-        predict_status_module.BINNING_CONFIG_PATH = BINNING_CONFIG_PATH
+        predict_status_module.BINNING_CONFIG_PATH = binning_config_path
         predict_status_module.RESULT_DIR = RESULT_DIR
 
         emitter = LogEmitter(self.log_message)
@@ -117,7 +131,9 @@ class PredictionWorker(QObject):
             model = pickle.load(f)
         self.progress_updated.emit(30)
 
-        binning_config = predict_status_module.load_binning_config(BINNING_CONFIG_PATH)
+        binning_config_path = _resolve_binning_config_path()
+        predict_status_module.BINNING_CONFIG_PATH = binning_config_path
+        binning_config = predict_status_module.load_binning_config(binning_config_path)
         dataset_config = binning_config["metadata"]["dataset_config"]
         target_col = dataset_config["target_col"]
         single_input = dict(data_dict)

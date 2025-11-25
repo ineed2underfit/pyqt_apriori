@@ -1,4 +1,6 @@
 from enum import Enum
+import sys
+from pathlib import Path
 
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import QLabel
@@ -47,3 +49,16 @@ def set_window_center(window):
     cp = window.screen().availableGeometry().center()
     qr.moveCenter(cp)
     window.move(qr.topLeft())
+
+
+def get_data_directory() -> str:
+    """Return the datas directory, handling dev vs PyInstaller environments."""
+    if getattr(sys, "frozen", False):
+        base_dir = Path(sys.executable).resolve().parent
+        data_dir = base_dir / "datas"
+    else:
+        project_root = Path(__file__).resolve().parent.parent
+        data_dir = project_root / "Bayesian_1130" / "datas"
+
+    data_dir.mkdir(parents=True, exist_ok=True)
+    return str(data_dir)

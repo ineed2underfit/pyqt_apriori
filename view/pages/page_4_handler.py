@@ -337,9 +337,15 @@ class PageFourHandler(QObject):
         return disk_info
 
     def _load_dataset_config_from_disk(self):
-        """从 Apriori 分箱配置文件载入列信息"""
-        config_path = os.path.join(os.getcwd(), "Bayesian_1130", "Apriori", "分箱配置.json")
-        if not os.path.exists(config_path):
+        """从最新的配置文件载入列信息"""
+        project_root = os.path.join(os.getcwd(), "Bayesian_1130")
+        candidate_paths = [
+            os.path.join(project_root, "result", "apriori_results", "完整数据配置.json"),
+            os.path.join(project_root, "Apriori", "分箱配置.json"),
+            os.path.join(project_root, "result", "apriori_results", "分箱配置.json"),
+        ]
+        config_path = next((p for p in candidate_paths if os.path.exists(p)), None)
+        if not config_path:
             return None
         try:
             with open(config_path, 'r', encoding='utf-8') as f:

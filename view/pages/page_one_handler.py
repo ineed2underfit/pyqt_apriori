@@ -2,7 +2,7 @@ from typing import Optional
 
 from PySide6.QtCore import QObject
 import pandas as pd
-from common.utils import show_dialog
+from common.utils import show_dialog, get_data_directory
 from workers.TaskManager import task_manager
 from PySide6.QtWidgets import QFileDialog, QDialog
 import os
@@ -24,9 +24,7 @@ class PageOneHandler(QObject):
     def select_file(self):
         """选择文件的方式"""
         try:
-            # 获取项目根目录下的apriori文件夹作为默认路径
-            project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-            default_path = os.path.join(project_root, "Bayesian_1130", "datas")
+            default_path = get_data_directory()
 
             file_path, _ = QFileDialog.getOpenFileName(
                 self._parent,

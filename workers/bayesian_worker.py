@@ -10,9 +10,11 @@ from PySide6.QtCore import QObject, Signal
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BAYESIAN_ROOT = os.path.join(PROJECT_ROOT, "Bayesian_1130")
 DATA_DIR = os.path.join(BAYESIAN_ROOT, "datas")
-APR_BINNING_PATH = os.path.join(BAYESIAN_ROOT, "Apriori", "分箱配置.json")
+APRIORI_RESULT_DIR = os.path.join(BAYESIAN_ROOT, "result", "apriori_results")
+COMPREHENSIVE_CONFIG_PATH = os.path.join(APRIORI_RESULT_DIR, "完整数据配置.json")
+BASIC_BINNING_PATH = os.path.join(APRIORI_RESULT_DIR, "分箱配置.json")
 RESULT_DIR = os.path.join(BAYESIAN_ROOT, "result", "bayesian_results")
-RULES_CSV_PATH = os.path.join(BAYESIAN_ROOT, "result", "apriori_results", "关联规则分析结果.csv")
+RULES_CSV_PATH = os.path.join(APRIORI_RESULT_DIR, "关联规则分析结果.csv")
 
 os.makedirs(DATA_DIR, exist_ok=True)
 os.makedirs(RESULT_DIR, exist_ok=True)
@@ -32,6 +34,17 @@ build_model_module = _load_module(
     "bayesian_build_model",
     os.path.join("Bayesian", "build_model.py")
 )
+
+
+def _resolve_binning_config_path():
+    if os.path.exists(COMPREHENSIVE_CONFIG_PATH):
+        return COMPREHENSIVE_CONFIG_PATH
+    if os.path.exists(BASIC_BINNING_PATH):
+        return BASIC_BINNING_PATH
+    raise FileNotFoundError(
+        "未找到完整数据配置文件，请先在页面二完成规则挖掘: "
+        f"{COMPREHENSIVE_CONFIG_PATH}"
+    )
 
 
 class LogEmitter(io.TextIOBase):
@@ -72,6 +85,10 @@ class BayesianWorker(QObject):
                 raise FileNotFoundError(
                     f"未找到关联规则文件，请先在页面二完成规则挖掘: {RULES_CSV_PATH}"
                 )
+            binning_config_path = _resolve_binning_config_path()
+            if hasattr(build_model_module, "BINNING_CONFIG_PATH"):
+                build_model_module.BINNING_CONFIG_PATH = binning_config_path
+
 
             self.progress_updated.emit(5, "准备构建贝叶斯网络...")
             train_filename = self._prepare_dataset_file()

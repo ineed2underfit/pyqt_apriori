@@ -93,7 +93,6 @@ class PageTwoHandler(QObject):
             output = self._format_rules_html(results_df, "初始规则提取完成")
             self._parent.textEdit_3.setHtml(output)
             self._parent.textEdit_3.verticalScrollBar().setValue(0)
-            self._sync_binning_config()
         except Exception as exc:
             self._parent.on_common_error(f"处理结果时出错: {exc}")
 
@@ -188,21 +187,3 @@ class PageTwoHandler(QObject):
 
         html += '</div>'
         return html
-
-    def _sync_binning_config(self):
-        """将最新分箱配置同步到 Apriori 模块供 Page3/4 使用"""
-        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        result_dir = os.path.join(project_root, "Bayesian_1130", "result", "apriori_results")
-        comprehensive_src = os.path.join(result_dir, "完整数据配置.json")
-        basic_src = os.path.join(result_dir, "分箱配置.json")
-        if os.path.exists(comprehensive_src):
-            src = comprehensive_src
-        else:
-            src = basic_src
-        dst = os.path.join(project_root, "Bayesian_1130", "Apriori", "分箱配置.json")
-        if not os.path.exists(src):
-            return
-        try:
-            shutil.copy2(src, dst)
-        except Exception as exc:
-            show_dialog(self._parent, f"同步分箱配置失败: {exc}", "提示")

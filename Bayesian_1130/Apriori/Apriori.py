@@ -1897,8 +1897,8 @@ class EquipmentAnalyzer:
         import json
 
         if output_path is None:
-            # 默认将JSON文件放在Apriori目录下
-            output_dir = self.get_apriori_dir()
+            # 默认将JSON文件放在 result/apriori_results 目录
+            output_dir = self.get_result_dir()
             output_path = os.path.join(output_dir, '分箱配置.json')
 
         # 获取所有信息
@@ -1960,17 +1960,9 @@ class EquipmentAnalyzer:
         
         exported_files = {}
 
-        # 1. 导出完整配置到result目录
+        # 导出完整配置到result目录
         comprehensive_path = os.path.join(output_dir, '完整数据配置.json')
         exported_files['comprehensive_config'] = self.export_binning_config(comprehensive_path, df, processed_df)
-        
-        # 2. 导出JSON配置文件到Apriori目录（供Bayesian网络使用）
-        apriori_dir = self.get_apriori_dir()
-        os.makedirs(apriori_dir, exist_ok=True)
-        json_config_path = os.path.join(apriori_dir, '分箱配置.json')
-        self.export_binning_config(json_config_path, df, processed_df)
-        exported_files['json_config'] = json_config_path
-        print(f"✅ JSON配置文件已保存到Apriori目录: {json_config_path}")
 
         if df is not None:
             # 3. 单独导出各类信息到result目录
