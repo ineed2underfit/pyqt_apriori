@@ -6,6 +6,7 @@ from qfluentwidgets import FluentWindow, NavigationItemPosition, NavigationDispl
 from components.icon import MyIcon
 from qfluentwidgets import FluentIcon as FIF
 from services import AprioriService
+from common.utils import resolve_bayesian_path
 from view.pages.page_one import PageOne
 from view.pages.page_two import PageTwo
 from view.pages.page_3 import Page3
@@ -13,9 +14,6 @@ from view.pages.page_4 import Page4
 from view.pages.page_5 import Page5
 from view.pages.page_6 import Page6
 from view.pages.setting_page import SettingInterface
-import os
-
-
 class MainWindow(FluentWindow):
     """ 主界面 """
 
@@ -23,7 +21,7 @@ class MainWindow(FluentWindow):
         super().__init__()
 
         # 定义共享文件路径
-        self.model_pkl_path = os.path.abspath("Bayesian_1130/Bayesian/models/final_bn_model.pkl")
+        self.model_pkl_path = resolve_bayesian_path("Bayesian", "models", "final_bn_model.pkl")
 
         if sys.platform == "darwin":
             self.navigationInterface.panel.setReturnButtonVisible(False)

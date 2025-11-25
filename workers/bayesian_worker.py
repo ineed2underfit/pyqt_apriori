@@ -6,15 +6,15 @@ from contextlib import redirect_stdout
 
 from PySide6.QtCore import QObject, Signal
 
+from common.utils import get_bayesian_root, resolve_bayesian_path
 
-PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-BAYESIAN_ROOT = os.path.join(PROJECT_ROOT, "Bayesian_1130")
-DATA_DIR = os.path.join(BAYESIAN_ROOT, "datas")
-APRIORI_RESULT_DIR = os.path.join(BAYESIAN_ROOT, "result", "apriori_results")
-COMPREHENSIVE_CONFIG_PATH = os.path.join(APRIORI_RESULT_DIR, "完整数据配置.json")
-BASIC_BINNING_PATH = os.path.join(APRIORI_RESULT_DIR, "分箱配置.json")
-RESULT_DIR = os.path.join(BAYESIAN_ROOT, "result", "bayesian_results")
-RULES_CSV_PATH = os.path.join(APRIORI_RESULT_DIR, "关联规则分析结果.csv")
+BAYESIAN_ROOT = get_bayesian_root()
+DATA_DIR = str(BAYESIAN_ROOT / "datas")
+APRIORI_RESULT_DIR = BAYESIAN_ROOT / "result" / "apriori_results"
+COMPREHENSIVE_CONFIG_PATH = str(APRIORI_RESULT_DIR / "完整数据配置.json")
+BASIC_BINNING_PATH = str(APRIORI_RESULT_DIR / "分箱配置.json")
+RESULT_DIR = str(BAYESIAN_ROOT / "result" / "bayesian_results")
+RULES_CSV_PATH = str(APRIORI_RESULT_DIR / "关联规则分析结果.csv")
 
 os.makedirs(DATA_DIR, exist_ok=True)
 os.makedirs(RESULT_DIR, exist_ok=True)

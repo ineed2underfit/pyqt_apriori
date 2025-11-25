@@ -4,7 +4,7 @@ import re
 
 from PySide6.QtCore import QObject
 
-from common.utils import show_dialog
+from common.utils import show_dialog, get_bayesian_root
 
 
 class Page6Handler(QObject):
@@ -15,8 +15,8 @@ class Page6Handler(QObject):
         self._parent = parent
 
     def generate_report(self):
-        project_root = os.getcwd()
-        missing_assets = self._check_required_assets(project_root)
+        bayesian_root = str(get_bayesian_root())
+        missing_assets = self._check_required_assets(bayesian_root)
         if missing_assets:
             missing_text = "\n".join(f"- {item}" for item in missing_assets)
             show_dialog(
@@ -35,7 +35,7 @@ class Page6Handler(QObject):
         self._parent.pushButton.setEnabled(False)
 
         try:
-            html_content = self._build_html_from_assets(project_root)
+            html_content = self._build_html_from_assets(bayesian_root)
         except Exception as exc:
             show_dialog(self._parent, f"生成报告内容失败:\n{exc}", "错误")
             self._parent.textEdit.clear()
@@ -48,10 +48,10 @@ class Page6Handler(QObject):
     # ----------------- HTML 组装 -----------------
 
     def _build_html_from_assets(self, root_dir: str) -> str:
-        apriori_dir = os.path.join(root_dir, "Bayesian_1130", "result", "apriori_results")
-        bayesian_dir = os.path.join(root_dir, "Bayesian_1130", "result", "bayesian_results")
+        apriori_dir = os.path.join(root_dir, "result", "apriori_results")
+        bayesian_dir = os.path.join(root_dir, "result", "bayesian_results")
         report_path = os.path.join(bayesian_dir, "prediction_report.txt")
-        doc_path = os.path.join(root_dir, "Bayesian_1130", "故障预测分析报告.docx")
+        doc_path = os.path.join(root_dir, "故障预测分析报告.docx")
 
         apriori_images = [
             ("故障预测规则提升度.png", "故障预测规则提升度对比"),
@@ -211,8 +211,8 @@ class Page6Handler(QObject):
                 self._parent.close_state_tooltip()
 
     def _check_required_assets(self, root_dir: str):
-        apriori_dir = os.path.join(root_dir, "Bayesian_1130", "result", "apriori_results")
-        bayesian_dir = os.path.join(root_dir, "Bayesian_1130", "result", "bayesian_results")
+        apriori_dir = os.path.join(root_dir, "result", "apriori_results")
+        bayesian_dir = os.path.join(root_dir, "result", "bayesian_results")
 
         requirements = [
             ("离散化提升图 (Page2)", os.path.join(apriori_dir, "故障预测规则提升度.png")),

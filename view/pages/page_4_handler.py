@@ -11,7 +11,7 @@ from PySide6.QtWidgets import (
     QWidget,
     QScrollArea,
 )
-from common.utils import show_dialog
+from common.utils import show_dialog, get_data_directory, resolve_bayesian_path
 from workers.prediction_worker import PredictionWorker, RESULT_DIR
 import os
 import re
@@ -30,8 +30,7 @@ class PageFourHandler(QObject):
     def select_test_file(self):
         """打开文件对话框，让用户选择测试数据集"""
         try:
-            project_root = os.getcwd()
-            default_dir = os.path.join(project_root, "Bayesian_1130", "datas")
+            default_dir = get_data_directory()
             file_path, _ = QFileDialog.getOpenFileName(
                 self._parent, "选择测试数据文件", default_dir, "CSV Files (*.csv);;All Files (*.*)"
             )
@@ -338,11 +337,9 @@ class PageFourHandler(QObject):
 
     def _load_dataset_config_from_disk(self):
         """从最新的配置文件载入列信息"""
-        project_root = os.path.join(os.getcwd(), "Bayesian_1130")
         candidate_paths = [
-            os.path.join(project_root, "result", "apriori_results", "完整数据配置.json"),
-            os.path.join(project_root, "Apriori", "分箱配置.json"),
-            os.path.join(project_root, "result", "apriori_results", "分箱配置.json"),
+            resolve_bayesian_path("result", "apriori_results", "完整数据配置.json"),
+            resolve_bayesian_path("result", "apriori_results", "分箱配置.json"),
         ]
         config_path = next((p for p in candidate_paths if os.path.exists(p)), None)
         if not config_path:

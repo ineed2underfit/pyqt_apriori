@@ -6,8 +6,9 @@ from contextlib import redirect_stdout
 
 from PySide6.QtCore import QObject, Signal
 
-PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-APRIORI_MODULE_PATH = os.path.join(PROJECT_ROOT, "Bayesian_1130", "Apriori", "Apriori.py")
+from common.utils import resolve_bayesian_path
+
+APRIORI_MODULE_PATH = resolve_bayesian_path("Apriori", "Apriori.py")
 _spec = importlib.util.spec_from_file_location("gui_equipment_analyzer_worker", APRIORI_MODULE_PATH)
 if _spec is None or _spec.loader is None:
     raise ImportError(f"无法加载 Apriori 模块: {APRIORI_MODULE_PATH}")

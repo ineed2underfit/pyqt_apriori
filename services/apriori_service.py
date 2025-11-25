@@ -8,10 +8,9 @@ from typing import Dict, List, Optional
 
 from PySide6.QtCore import QObject, Signal
 
-# 解析 EquipmentAnalyzer 所在模�?
-PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
-LEGACY_PROJECT_ROOT = os.path.dirname(PROJECT_ROOT)
-APRIORI_MODULE_PATH = os.path.join(LEGACY_PROJECT_ROOT, "Bayesian_1130", "Apriori", "Apriori.py")
+from common.utils import resolve_bayesian_path
+
+APRIORI_MODULE_PATH = resolve_bayesian_path("Apriori", "Apriori.py")
 
 _spec = importlib.util.spec_from_file_location("bayesian_equipment_analyzer", APRIORI_MODULE_PATH)
 if _spec is None or _spec.loader is None:

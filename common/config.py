@@ -20,7 +20,7 @@ class Config(MyQConfig):
 
 
 YEAR = datetime.datetime.now().year
-AUTHOR = "Cheukfung"
+AUTHOR = "Howard Cheung"
 VERSION = '0.0.1'
 FEEDBACK_URL = "https://github.com/Cheukfung"
 

@@ -62,3 +62,20 @@ def get_data_directory() -> str:
 
     data_dir.mkdir(parents=True, exist_ok=True)
     return str(data_dir)
+
+
+def get_app_root() -> Path:
+    """Return the root directory containing project resources."""
+    if getattr(sys, "frozen", False):
+        return Path(sys._MEIPASS)
+    return Path(__file__).resolve().parent.parent
+
+
+def get_bayesian_root() -> Path:
+    """Return the root directory of Bayesian_1130 assets."""
+    return get_app_root() / "Bayesian_1130"
+
+
+def resolve_bayesian_path(*parts: str) -> str:
+    """Build an absolute path inside Bayesian_1130 regardless of runtime mode."""
+    return str(get_bayesian_root().joinpath(*parts))
