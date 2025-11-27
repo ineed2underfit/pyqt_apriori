@@ -26,19 +26,6 @@ class MyLogger:
                        "<level>{level}</level>: <level>{message}</level>",
             )
 
-        base_path = get_base_dir()
-        log_file_path = os.path.join(base_path, f"v{VERSION}.log")
-        self.logger.add(
-            log_file_path,
-            level="WARNING",
-            rotation="10 MB",
-            format='{time:YYYY-MM-DD HH:mm:ss} - '
-                   "{process.name} | "
-                   "{thread.name} | "
-                   "{module}.{function}:{line} - {level} - {message}",
-            encoding="utf-8"
-        )
-
     def get_logger(self):
         return self.logger
 

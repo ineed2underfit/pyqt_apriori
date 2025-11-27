@@ -1,5 +1,5 @@
 import sys
-from PySide6.QtCore import QRect, QSize, Qt
+from PySide6.QtCore import QRect, QSize, Qt, QEvent
 from PySide6.QtGui import QIcon, QPixmap, QPainter, QLinearGradient, QColor, QBrush, QAction
 from PySide6.QtWidgets import QLabel, QMenu, QApplication, QSystemTrayIcon
 from qfluentwidgets import FluentWindow, NavigationItemPosition, NavigationDisplayMode
@@ -30,11 +30,13 @@ class MainWindow(FluentWindow):
             self.navigationInterface.setExpandWidth(150)
             try:
                 self.navigationInterface.setDisplayMode(NavigationDisplayMode.MENU)
+                self.navigationInterface.setMinimumExpandWidth(0)
                 if hasattr(self.navigationInterface, "setCollapsible"):
-                    # 禁用自动折叠逻辑，同时手动保留菜单按钮以便用户控制
-                    self.navigationInterface.setCollapsible(False)
-                    if hasattr(self.navigationInterface, "panel"):
-                        self.navigationInterface.panel.setMenuButtonVisible(True)
+                    self.navigationInterface.setCollapsible(True)
+                if hasattr(self.navigationInterface, "panel"):
+                    panel = self.navigationInterface.panel
+                    panel.setMenuButtonVisible(True)
+                    self._override_navigation_event_filter(panel)
             except AttributeError:
                 if hasattr(self.navigationInterface, "collapse"):
                     self.navigationInterface.collapse(useAni=False)
@@ -65,6 +67,20 @@ class MainWindow(FluentWindow):
         self.init_navigation()
         self.init_window()
         self.create_tray_icon()
+
+    def _override_navigation_event_filter(self, panel):
+        """Prevent navigation panel from auto collapse on resize or mouse release."""
+        original_filter = panel.eventFilter
+
+        def custom_filter(p, obj, event):
+            if obj is p.window() and event.type() in (QEvent.MouseButtonRelease, QEvent.Resize):
+                return False
+            return original_filter(obj, event)
+
+        panel.eventFilter = custom_filter.__get__(panel, type(panel))
+        if panel.window():
+            panel.window().removeEventFilter(panel)
+            panel.window().installEventFilter(panel)
 
     def create_tray_icon(self):
         self.tray_icon = QSystemTrayIcon(self)

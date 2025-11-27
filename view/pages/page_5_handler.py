@@ -73,6 +73,25 @@ class Page5Handler(QObject):
         self._cached_target_col = None
         self._cached_normal_value = None
 
+    def update_device_options_from_path(self, dataset_path: str):
+        """根据 Page4 导入的测试集刷新设备选项"""
+        if not dataset_path or not os.path.exists(dataset_path):
+            return
+        try:
+            df = pd.read_csv(dataset_path)
+        except Exception as exc:
+            show_dialog(self._parent, f'加载测试数据失败: {exc}', '错误')
+            return
+
+        device_col, target_col, normal_value = self._detect_columns(df)
+        if not device_col:
+            return
+
+        self._populate_device_options(df, device_col)
+        self._current_dataset_path = dataset_path
+
+
+
     def query_fault_records(self):
         """查询设备故障记录"""
         try:
@@ -223,16 +242,19 @@ class Page5Handler(QObject):
         return [convert(c) for c in re.split(r'(\d+)', value)]
 
     def _select_device_column(self, df, preferred_candidates):
-        """根据优先级挑选设备列，默认为“设备名称”或“device_id”"""
-        ordered = []
+        """根据优先级挑选设备列，优先使用“设备名称”或“device_id”"""
+        priority = []
+        for name in ("设备名称", "device_name", "device_id", "dev_id", "设备编号"):
+            if name not in priority:
+                priority.append(name)
         for candidate in preferred_candidates or []:
-            if candidate and candidate not in ordered:
-                ordered.append(candidate)
-        for fallback in ('设备名称', 'device_id'):
-            if fallback not in ordered:
-                ordered.append(fallback)
+            if candidate and candidate not in priority:
+                priority.append(candidate)
+        for fallback in ("设备型号", "device_code"):
+            if fallback not in priority:
+                priority.append(fallback)
 
-        for column in ordered:
+        for column in priority:
             if column in df.columns:
                 return column
         return None

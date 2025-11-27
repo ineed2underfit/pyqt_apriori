@@ -15,6 +15,8 @@ class Page5(QWidget, Ui_page_5):
         super().__init__(parent)
         self.loading_bar = None
         self.setupUi(self)
+        if hasattr(self, 'comboBox'):
+            self.comboBox.clear()
         # PageOne 创建 Handler 实例并建立双向引用
         self.handler = Page5Handler(self)
         self.bind_event()

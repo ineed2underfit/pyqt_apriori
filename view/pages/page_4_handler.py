@@ -38,6 +38,7 @@ class PageFourHandler(QObject):
                 self.test_data_path = file_path
                 self._parent.textEdit_3.setText(f"已选择测试文件进行批量评估：\n{file_path}")
                 self._parent.pushButton_assessment.setEnabled(True)
+                self._notify_page5_dataset(file_path)
         except Exception as e:
             show_dialog(self._parent, f'文件选择出错: {str(e)}', '错误')
 
@@ -367,6 +368,13 @@ class PageFourHandler(QObject):
 
 
 
+    def _notify_page5_dataset(self, dataset_path: str):
+        main_window = self._parent.window()
+        page5 = getattr(main_window, 'page5', None)
+        handler = getattr(page5, 'handler', None) if page5 else None
+        if handler and hasattr(handler, 'update_device_options_from_path'):
+            handler.update_device_options_from_path(dataset_path)
+
 class SinglePredictionDialog(QDialog):
     """根据 Page1 配置动态生成的单次预测输入弹窗"""
 
@@ -515,3 +523,4 @@ class SinglePredictionDialog(QDialog):
         if self.target_col and self.normal_value and self.target_col not in data:
             data[self.target_col] = self.normal_value
         return data
+
