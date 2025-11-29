@@ -1,6 +1,7 @@
 import html
 import os
 import re
+import time
 from typing import Dict, List
 from PySide6.QtWidgets import QFileDialog
 import shutil
@@ -9,6 +10,7 @@ from pathlib import Path
 from PySide6.QtCore import QObject
 
 from common.utils import show_dialog, get_bayesian_root
+from docx import Document
 
 
 class Page6Handler(QObject):
@@ -40,14 +42,11 @@ class Page6Handler(QObject):
 
         try:
             html_content = self._build_html_from_assets(bayesian_root)
-            # --- new code added ---
             try:
                 from Bayesian_1130.generate_report import main as generate_docx_report
                 generate_docx_report()
             except Exception as doc_exc:
-                # If docx generation fails, show a non-blocking warning but continue
                 show_dialog(self._parent, f"在后台生成 Word 报告失败:\n{doc_exc}", "警告")
-            # --- end of new code ---
         except Exception as exc:
             show_dialog(self._parent, f"生成报告内容失败:\n{exc}", "错误")
             self._parent.textEdit.clear()
@@ -61,7 +60,6 @@ class Page6Handler(QObject):
         """导出报告所需的所有资产文件"""
         bayesian_root = get_bayesian_root()
         
-        # 1. 检查所有必需的文件是否都已生成
         missing_assets = self._check_required_assets(str(bayesian_root), check_docx=True)
         if missing_assets:
             missing_text = "\n".join(f"- {item}" for item in missing_assets)
@@ -74,7 +72,6 @@ class Page6Handler(QObject):
             )
             return
 
-        # 2. 弹出文件保存对话框
         default_save_path = Path.home() / "故障预测分析报告"
         target_path, _ = QFileDialog.getSaveFileName(
             self._parent,
@@ -84,10 +81,8 @@ class Page6Handler(QObject):
         )
 
         if not target_path:
-            return  # 用户取消
+            return
 
-        # 3. 创建目标文件夹
-        # 使用用户输入的文件名（不含扩展名）作为文件夹名
         target_p = Path(target_path)
         export_dir = target_p.parent / target_p.stem
         try:
@@ -96,28 +91,43 @@ class Page6Handler(QObject):
             show_dialog(self._parent, f"创建导出文件夹失败：\n{export_dir}\n\n错误: {e}", "错误")
             return
 
-        # 4. 定义并复制所有资产文件
         source_assets = self._get_asset_paths(bayesian_root)
         try:
             for asset_path in source_assets:
                 if asset_path.exists():
-                    shutil.copy(asset_path, export_dir)
+                    dest_path = Path(shutil.copy2(asset_path, export_dir))
+                    # Ensure exported Word 报告的文件时间为最新，避免旧时间戳
+                    if asset_path.suffix.lower() == ".docx":
+                        now = time.time()
+                        try:
+                            os.utime(dest_path, (now, now))
+                        except OSError:
+                            pass
+                        # 同步 Word 内部核心属性时间，避免 2013 “创建内容时间”
+                        try:
+                            doc = Document(dest_path)
+                            current = doc.core_properties
+                            current.created = current.modified = current.last_printed = None
+                            from datetime import datetime
+                            ts = datetime.now()
+                            current.created = ts
+                            current.modified = ts
+                            doc.save(dest_path)
+                        except Exception:
+                            # 若写入元数据失败，不阻断导出
+                            pass
                 else:
-                    # 理论上 _check_required_assets 已经检查过，但作为安全措施
                     raise FileNotFoundError(f"源文件在复制时丢失: {asset_path}")
         except (shutil.Error, FileNotFoundError) as e:
             show_dialog(self._parent, f"复制文件到导出目录时出错：\n{e}", "错误")
             return
 
-        # 5. 显示成功信息
         show_dialog(
             self._parent,
-            "报告资产导出成功！\n\n" 
+            "报告资产导出成功！\n\n"
             f"所有文件已保存至：\n{export_dir}",
             "导出成功",
         )
-
-    # ----------------- HTML 组装 -----------------
 
     def _build_html_from_assets(self, root_dir: str) -> str:
         apriori_dir = os.path.join(root_dir, "result", "apriori_results")
@@ -131,89 +141,103 @@ class Page6Handler(QObject):
             ("离散化方法执行时间对比.png", "各离散化方法执行时间对比"),
             ("离散化方法性能综合对比.png", "离散化方法性能综合对比（执行时间 vs 规则数量）"),
         ]
+        
+        bayesian_images = [
+            ("bn_structure.png", "贝叶斯网络结构图"),
+            ("confusion_matrix.png", "混淆矩阵"),
+        ]
 
         prediction_data = self._parse_prediction_report(report_path)
 
+        # --- Reverted to simple and reliable style block ---
         style_block = """
         <style>
-            body { font-family: 'Microsoft YaHei','Segoe UI',sans-serif; background:#f6f8fb; }
-            .report { font-size:11pt; line-height:1; color:#263238; padding:12px 6%; width:100%; box-sizing:border-box; }
-            .report-title { font-size:18px; font-weight:bold; color:#0d47a1; border-bottom:2px solid #dfe6f0; padding-bottom:6px; margin-bottom:12px; }
-            .section-title { font-size:14pt; color:#1565c0; margin:18px 0 12px; border-left:4px solid #5c9ded; padding-left:10px; font-weight: bold;}
-            .sub-title { font-size:12pt; color:#1e88e5; margin:16px 0 8px; display:block; text-align:left; font-weight: bold;}
-            .intro { text-indent:2em; margin:6px 0 10px; }
-            .img-block { margin:18px 0; text-align:center; }
-            .figure-title { width:90%; margin:0 auto 8px; font-size:30pt; color:#0d2f4f; font-weight:600; text-align:left; }
-            .img-block img { width:90%; max-width:90%; height:auto; border-radius:10px; border:1px solid #e3e9ef; background:#fff; padding:6px; box-shadow:0 2px 6px rgba(0,0,0,0.05); }
-            table { width:100%; border-collapse:collapse; margin:12px 0; font-size:10.5pt; }
-            table th { background:#e3f2fd; padding:8px; color:#1a237e; border:1px solid #dfe6f0; }
-            table td { border:1px solid #e3e9ef; padding:8px; background:#fff; }
-            table tbody tr:nth-child(odd) td { background:#fdfdfd; }
-            .placeholder { margin:10px 0; padding:10px; background:#fff9c4; border-left:4px solid #fbc02d; color:#7f6000; }
-            .docx-tip { font-size:10pt; color:#546e7a; margin-top:12px; word-break:break-all; }
+            .section-title {
+                font-size: 14pt;
+                font-weight: bold;
+                color: #34495e;
+                margin: 0 0 10px 0;
+                padding-bottom: 5px;
+                border-bottom: 1px solid #e0e0e0;
+            }
+            img { /* Directly styling the img tag */
+                width: 80%;
+                max-width: 80%;
+                height: auto;
+                border: 1px solid #d0d0d0;
+                border-radius: 8px;
+                padding: 10px;
+                background: #fff;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            }
+            .caption { /* Caption styling */
+                font-size: 10pt;
+                font-weight: bold;
+                text-align: center;
+                color: #34495e;
+                margin-bottom: 15px;
+            }
+            table { width:100%; border-collapse:collapse; margin:15px 0; font-size:9.5pt; }
+            table th { background:#f2f2f2; padding:8px; border-bottom:2px solid #ccc; text-align:left; }
+            table td { padding:8px; border-bottom:1px solid #eee; }
+            .placeholder { margin:10px 0; padding:10px; border-left:4px solid #fbc02d; color:#7f6000; }
+            .docx-tip { font-size:9pt; color:#7f8c8d; margin-top:20px; text-align:center; }
         </style>
         """
 
-        html_parts = ["<html><head>", style_block, "</head><body><div class='report'>"]
-        html_parts.append('<div class="report-title">质量评价模型分析报告</div>')
-        html_parts.append(
-            "<p class='intro'>以下内容直接取自最新一次 Apriori 规则挖掘与贝叶斯网络评估的结果，"
-            "展示顺序与 CLI 版报告保持一致。</p>"
-        )
-
-        # Section 1
-        html_parts.append("<div class='section-title'>一、Apriori 数据挖掘板块</div>")
-        html_parts.append(
-            "<p class='intro'>本部分对不同离散化方法在 Apriori 算法中的性能进行了全面评估，"
-            "包括生成规则的数量、执行时间以及综合性能对比。</p>"
-        )
+        html_parts = ["<html><head>", style_block, "</head><body>"]
+        html_parts.append("<div style=\"font-size: 10pt; line-height: 1.6; font-family: Arial, sans-serif;\">")
+        
+        # --- Section 1: Apriori ---
+        html_parts.append('<div style="margin-bottom: 12px; padding: 12px; border: 1px solid #e0e0e0; border-radius: 6px;">')
+        html_parts.append('<div class="section-title">🔍 Apriori 数据挖掘分析</div>')
+        html_parts.append("<p>本部分对不同离散化方法在 Apriori 算法中的性能进行评估，包括生成规则的数量、执行时间以及综合性能对比。</p>")
         for filename, caption in apriori_images:
             path = os.path.join(apriori_dir, filename)
             if os.path.exists(path):
                 img_src = path.replace("\\\\", "/")
-                html_parts.append("<div class='img-block'>")
-                html_parts.append(f"<div class='sub-title'>{caption}</div>")
-                html_parts.append("<br>")
+                # Reverted HTML structure for images
+                html_parts.append('<div style="margin-top:20px;">')
+                html_parts.append(f'<p class="caption">{caption}</p>')
                 html_parts.append(f"<center><img src='file:///{img_src}' alt='{caption}' /></center>")
                 html_parts.append("</div>")
+                html_parts.append("<br>")
             else:
                 html_parts.append(f"<div class='placeholder'>[缺失图片: {filename}]</div>")
+        html_parts.append("</div>")
 
-        # Section 2
-        html_parts.append("<div class='section-title'>二、贝叶斯网络板块</div>")
-        html_parts.append(
-            "<p class='intro'>本部分展示了基于贝叶斯网络模型的设备状态预测结果，"
-            "包括网络结构、模型性能评估和详细分类报告。</p>"
-        )
-
-        for filename, caption in [
-            ("bn_structure.png", "贝叶斯网络结构图"),
-            ("confusion_matrix.png", "混淆矩阵"),
-        ]:
+        # --- Section 2: Bayesian ---
+        html_parts.append('<div style="margin-bottom: 12px; padding: 12px; border: 1px solid #e0e0e0; border-radius: 6px;">')
+        html_parts.append('<div class="section-title">🧠 贝叶斯网络分析</div>')
+        html_parts.append("<p>本部分展示了基于贝叶斯网络模型的设备状态预测结果，包括网络结构、模型性能评估和详细分类报告。</p>")
+        for filename, caption in bayesian_images:
             path = os.path.join(bayesian_dir, filename)
             if os.path.exists(path):
                 img_src = path.replace("\\\\", "/")
-                html_parts.append("<div class='img-block'>")
-                html_parts.append(f"<div class='sub-title'>{caption}</div>")
-                html_parts.append("<br>")
+                # Reverted HTML structure for images
+                html_parts.append('<div style="margin-top:20px;">')
+                html_parts.append(f'<p class="caption">{caption}</p>')
                 html_parts.append(f"<center><img src='file:///{img_src}' alt='{caption}' /></center>")
                 html_parts.append("</div>")
+                html_parts.append("<br>")
             else:
                 html_parts.append(f"<div class='placeholder'>[缺失图片: {filename}]</div>")
 
         if prediction_data:
-            html_parts.append("<div class='sub-title'>模型性能评估报告</div>")
+            html_parts.append('<div class="section-title" style="margin-top:15px;">📊 模型性能评估报告</div>')
             if prediction_data.get("accuracy") is not None:
                 html_parts.append(
                     f"<p>模型整体准确率为：<strong>{prediction_data['accuracy']:.4f}</strong></p>"
                 )
             html_parts.append(self._build_class_table(prediction_data.get("classes", [])))
             html_parts.append(
-                "<p class='intro'><strong>结论：</strong>模型在“正常运行”等主流状态上表现稳定，"
+                "<p><strong>结论：</strong>模型在“正常运行”等主流状态上表现稳定，"
                 "但面对样本量较小的故障类别时仍存在一定的不确定性，建议结合业务经验继续优化。</p>"
             )
         else:
             html_parts.append("<div class='placeholder'>[预测报告缺失或无法解析]</div>")
+        html_parts.append("</div>")
+
 
         if os.path.exists(doc_path):
             html_parts.append(
@@ -251,7 +275,7 @@ class Page6Handler(QObject):
             content = f.read()
 
         data = {}
-        acc_match = re.search(r"\u603b\u4f53\u51c6\u786e\u7387[：:\s]*([0-9.]+)", content)
+        acc_match = re.search(r"\u603b\u4f53\u51c6\u786e\u7387[\uff1a:\s]*([0-9.]+)", content)
         if acc_match:
             data['accuracy'] = float(acc_match.group(1))
 
@@ -265,11 +289,11 @@ class Page6Handler(QObject):
                     break
                 continue
             if (
-                    not header_found
-                    and 'precision' in stripped
-                    and 'recall' in stripped
-                    and 'f1-score' in stripped
-                    and 'support' in stripped
+                not header_found
+                and 'precision' in stripped
+                and 'recall' in stripped
+                and 'f1-score' in stripped
+                and 'support' in stripped
             ):
                 header_found = True
                 continue

@@ -3,6 +3,7 @@ from docx import Document
 from docx.shared import Inches
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 import re
+from datetime import datetime
 
 # ----------------------------
 # 配置：使用相对路径（假设此脚本位于 Bayesian_1130 目录下）
@@ -60,6 +61,10 @@ def parse_prediction_report(report_path):
 # ----------------------------
 def main():
     doc = Document()
+    # Ensure Word core properties carry current timestamps (avoid legacy defaults).
+    now = datetime.now()
+    doc.core_properties.created = now
+    doc.core_properties.modified = now
 
     # 标题
     doc.add_heading('质量评价模型分析报告', 0)
