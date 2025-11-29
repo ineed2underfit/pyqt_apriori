@@ -1,4 +1,5 @@
-from PySide6.QtWidgets import QWidget, QGraphicsScene, QGraphicsPixmapItem
+import os
+from PySide6.QtWidgets import QWidget, QGraphicsScene, QGraphicsPixmapItem, QLabel
 from PySide6.QtGui import QPixmap, QResizeEvent
 from PySide6.QtCore import Qt
 
@@ -12,6 +13,9 @@ class Page3(QWidget, Ui_page_3):
         super().__init__(parent)
         self.setupUi(self)
         self.handler = PageThreeHandler(self)
+        self.datasetLabel = QLabel("当前数据集：未选择", self)
+        self.datasetLabel.setObjectName("label_dataset")
+        self.verticalLayout.insertWidget(0, self.datasetLabel)
 
         self.scene = QGraphicsScene(self)
         self.graphicsView.setScene(self.scene)
@@ -27,6 +31,10 @@ class Page3(QWidget, Ui_page_3):
 
     def bind_event(self):
         self.pushButton.clicked.connect(self.handler.build_bayesian_network)
+
+    def set_dataset_path(self, path):
+        name = os.path.basename(path) if path else "未选择"
+        self.datasetLabel.setText(f"当前数据集：{name}")
 
     def display_images(self, network_path, confusion_path=None):
         """加载贝叶斯网络结构图，第二张图可选"""

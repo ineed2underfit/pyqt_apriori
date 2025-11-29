@@ -128,6 +128,8 @@ class MainWindow(FluentWindow):
         """处理文件路径变化"""
         self.dataset_path = path  # 保存原始数据集路径
         self.pageTwo.set_dataset_path(path)
+        if hasattr(self, "page3"):
+            self.page3.set_dataset_path(path)
 
     def on_dataset_configured(self, info):
         self.dataset_config_info = info
