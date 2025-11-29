@@ -1,6 +1,10 @@
 import html
 import os
 import re
+from typing import Dict, List
+from PySide6.QtWidgets import QFileDialog
+import shutil
+from pathlib import Path
 
 from PySide6.QtCore import QObject
 
@@ -32,10 +36,18 @@ class Page6Handler(QObject):
             return
 
         self._set_loading(True, "正在汇总报告", "正在读取最新结果，请稍候…")
-        self._parent.pushButton.setEnabled(False)
+        self._parent.pushButton_export.setEnabled(False)
 
         try:
             html_content = self._build_html_from_assets(bayesian_root)
+            # --- new code added ---
+            try:
+                from Bayesian_1130.generate_report import main as generate_docx_report
+                generate_docx_report()
+            except Exception as doc_exc:
+                # If docx generation fails, show a non-blocking warning but continue
+                show_dialog(self._parent, f"在后台生成 Word 报告失败:\n{doc_exc}", "警告")
+            # --- end of new code ---
         except Exception as exc:
             show_dialog(self._parent, f"生成报告内容失败:\n{exc}", "错误")
             self._parent.textEdit.clear()
@@ -43,7 +55,67 @@ class Page6Handler(QObject):
             self._parent.textEdit.setHtml(html_content)
         finally:
             self._set_loading(False)
-            self._parent.pushButton.setEnabled(True)
+            self._parent.pushButton_export.setEnabled(True)
+
+    def save_report_assets(self):
+        """导出报告所需的所有资产文件"""
+        bayesian_root = get_bayesian_root()
+        
+        # 1. 检查所有必需的文件是否都已生成
+        missing_assets = self._check_required_assets(str(bayesian_root), check_docx=True)
+        if missing_assets:
+            missing_text = "\n".join(f"- {item}" for item in missing_assets)
+            show_dialog(
+                self._parent,
+                "无法导出，因为报告资产不完整。\n"
+                "请先点击“生成质量评估报告”按钮以确保所有文件都已就绪。\n\n"
+                f"以下文件缺失：\n{missing_text}",
+                "错误",
+            )
+            return
+
+        # 2. 弹出文件保存对话框
+        default_save_path = Path.home() / "故障预测分析报告"
+        target_path, _ = QFileDialog.getSaveFileName(
+            self._parent,
+            "选择导出位置和报告名称",
+            str(default_save_path),
+            "All Files (*)",
+        )
+
+        if not target_path:
+            return  # 用户取消
+
+        # 3. 创建目标文件夹
+        # 使用用户输入的文件名（不含扩展名）作为文件夹名
+        target_p = Path(target_path)
+        export_dir = target_p.parent / target_p.stem
+        try:
+            export_dir.mkdir(parents=True, exist_ok=True)
+        except OSError as e:
+            show_dialog(self._parent, f"创建导出文件夹失败：\n{export_dir}\n\n错误: {e}", "错误")
+            return
+
+        # 4. 定义并复制所有资产文件
+        source_assets = self._get_asset_paths(bayesian_root)
+        try:
+            for asset_path in source_assets:
+                if asset_path.exists():
+                    shutil.copy(asset_path, export_dir)
+                else:
+                    # 理论上 _check_required_assets 已经检查过，但作为安全措施
+                    raise FileNotFoundError(f"源文件在复制时丢失: {asset_path}")
+        except (shutil.Error, FileNotFoundError) as e:
+            show_dialog(self._parent, f"复制文件到导出目录时出错：\n{e}", "错误")
+            return
+
+        # 5. 显示成功信息
+        show_dialog(
+            self._parent,
+            "报告资产导出成功！\n\n" 
+            f"所有文件已保存至：\n{export_dir}",
+            "导出成功",
+        )
 
     # ----------------- HTML 组装 -----------------
 
@@ -65,25 +137,25 @@ class Page6Handler(QObject):
         style_block = """
         <style>
             body { font-family: 'Microsoft YaHei','Segoe UI',sans-serif; background:#f6f8fb; }
-            .report { font-size:11pt; line-height:1.65; color:#263238; padding:12px 18px; }
-            .report h1 { font-size:20pt; color:#0d47a1; border-bottom:2px solid #dfe6f0; padding-bottom:6px; margin-bottom:14px; }
-            .section-title { font-size:16pt; color:#1565c0; margin:18px 0 6px; border-left:4px solid #5c9ded; padding-left:10px; }
-            .sub-title { font-size:13pt; color:#1e88e5; margin:12px 0 4px; }
-            .intro { text-indent:2em; margin:8px 0; }
-            .img-card { margin:6px 0; padding:8px; background:#fff; border-radius:6px; box-shadow:0 2px 8px rgba(15,76,129,0.05); }
-            .img-card h4 { margin:0 0 6px 0; color:#1b5e20; font-weight:600; }
-            .img-card img { display:block; width:90%; max-width:90%; margin:0 auto; height:auto; border-radius:6px; border:1px solid #e3e9ef; object-fit:contain; }
+            .report { font-size:11pt; line-height:1; color:#263238; padding:12px 6%; width:100%; box-sizing:border-box; }
+            .report-title { font-size:18px; font-weight:bold; color:#0d47a1; border-bottom:2px solid #dfe6f0; padding-bottom:6px; margin-bottom:12px; }
+            .section-title { font-size:14pt; color:#1565c0; margin:18px 0 12px; border-left:4px solid #5c9ded; padding-left:10px; font-weight: bold;}
+            .sub-title { font-size:12pt; color:#1e88e5; margin:16px 0 8px; display:block; text-align:left; font-weight: bold;}
+            .intro { text-indent:2em; margin:6px 0 10px; }
+            .img-block { margin:18px 0; text-align:center; }
+            .figure-title { width:90%; margin:0 auto 8px; font-size:30pt; color:#0d2f4f; font-weight:600; text-align:left; }
+            .img-block img { width:90%; max-width:90%; height:auto; border-radius:10px; border:1px solid #e3e9ef; background:#fff; padding:6px; box-shadow:0 2px 6px rgba(0,0,0,0.05); }
             table { width:100%; border-collapse:collapse; margin:12px 0; font-size:10.5pt; }
             table th { background:#e3f2fd; padding:8px; color:#1a237e; border:1px solid #dfe6f0; }
             table td { border:1px solid #e3e9ef; padding:8px; background:#fff; }
             table tbody tr:nth-child(odd) td { background:#fdfdfd; }
-            .placeholder { margin:12px 0; padding:10px; background:#fff9c4; border-left:4px solid #fbc02d; color:#7f6000; }
-            .docx-tip { font-size:10pt; color:#546e7a; margin-top:12px; }
+            .placeholder { margin:10px 0; padding:10px; background:#fff9c4; border-left:4px solid #fbc02d; color:#7f6000; }
+            .docx-tip { font-size:10pt; color:#546e7a; margin-top:12px; word-break:break-all; }
         </style>
         """
 
         html_parts = ["<html><head>", style_block, "</head><body><div class='report'>"]
-        html_parts.append("<h1>质量评价模型分析报告</h1>")
+        html_parts.append('<div class="report-title">质量评价模型分析报告</div>')
         html_parts.append(
             "<p class='intro'>以下内容直接取自最新一次 Apriori 规则挖掘与贝叶斯网络评估的结果，"
             "展示顺序与 CLI 版报告保持一致。</p>"
@@ -98,10 +170,11 @@ class Page6Handler(QObject):
         for filename, caption in apriori_images:
             path = os.path.join(apriori_dir, filename)
             if os.path.exists(path):
-                img_src = path.replace("\\", "/")
-                html_parts.append("<div class='img-card'>")
-                html_parts.append(f"<h4>{caption}</h4>")
-                html_parts.append(f"<img src='file:///{img_src}' alt='{caption}' />")
+                img_src = path.replace("\\\\", "/")
+                html_parts.append("<div class='img-block'>")
+                html_parts.append(f"<div class='sub-title'>{caption}</div>")
+                html_parts.append("<br>")
+                html_parts.append(f"<center><img src='file:///{img_src}' alt='{caption}' /></center>")
                 html_parts.append("</div>")
             else:
                 html_parts.append(f"<div class='placeholder'>[缺失图片: {filename}]</div>")
@@ -119,10 +192,11 @@ class Page6Handler(QObject):
         ]:
             path = os.path.join(bayesian_dir, filename)
             if os.path.exists(path):
-                img_src = path.replace("\\", "/")
-                html_parts.append("<div class='img-card'>")
-                html_parts.append(f"<h4>{caption}</h4>")
-                html_parts.append(f"<img src='file:///{img_src}' alt='{caption}' />")
+                img_src = path.replace("\\\\", "/")
+                html_parts.append("<div class='img-block'>")
+                html_parts.append(f"<div class='sub-title'>{caption}</div>")
+                html_parts.append("<br>")
+                html_parts.append(f"<center><img src='file:///{img_src}' alt='{caption}' /></center>")
                 html_parts.append("</div>")
             else:
                 html_parts.append(f"<div class='placeholder'>[缺失图片: {filename}]</div>")
@@ -177,29 +251,78 @@ class Page6Handler(QObject):
             content = f.read()
 
         data = {}
-        acc_match = re.search(r"总体准确率[:：]\s*([0-9.]+)", content)
+        acc_match = re.search(r"\u603b\u4f53\u51c6\u786e\u7387[：:\s]*([0-9.]+)", content)
         if acc_match:
-            data["accuracy"] = float(acc_match.group(1))
+            data['accuracy'] = float(acc_match.group(1))
 
-        class_blocks = re.findall(
-            r"([\u4e00-\u9fa5A-Za-z0-9_]+)\s*:\s*支持样本数[:：]\s*([0-9.]+).*?"
-            r"精确率[:：]\s*([0-9.]+).*?召回率[:：]\s*([0-9.]+).*?F1分数[:：]\s*([0-9.]+)",
-            content,
-            re.DOTALL,
-        )
         classes = []
-        for name, sup, prec, rec, f1 in class_blocks:
-            classes.append(
-                {
-                    "name": name.strip(),
-                    "support": int(float(sup)),
-                    "precision": float(prec),
-                    "recall": float(rec),
-                    "f1-score": float(f1),
-                }
+        lines = content.splitlines()
+        header_found = False
+        for line in lines:
+            stripped = line.strip()
+            if not stripped:
+                if header_found and classes:
+                    break
+                continue
+            if (
+                    not header_found
+                    and 'precision' in stripped
+                    and 'recall' in stripped
+                    and 'f1-score' in stripped
+                    and 'support' in stripped
+            ):
+                header_found = True
+                continue
+            if header_found:
+                parts = stripped.split()
+                if len(parts) < 5:
+                    continue
+                label = parts[0]
+                if label in {'accuracy', 'macro', 'weighted'} or label.startswith('macro'):
+                    continue
+                try:
+                    precision, recall, f1_score, support = map(float, parts[1:5])
+                except ValueError:
+                    continue
+                classes.append({
+                    'name': label,
+                    'support': int(support),
+                    'precision': precision,
+                    'recall': recall,
+                    'f1-score': f1_score
+                })
+
+        if 'accuracy' not in data:
+            for line in lines:
+                stripped = line.strip()
+                if stripped.startswith('accuracy'):
+                    parts = stripped.split()
+                    if len(parts) >= 2:
+                        try:
+                            data['accuracy'] = float(parts[1])
+                        except ValueError:
+                            pass
+                    break
+
+        if not classes:
+            class_blocks = re.findall(
+                r"([\u4e00-\u9fa5A-Za-z0-9_]+)\s*:\s*\u652f\u6301\u6837\u672c.*?([0-9.]+).*?\u7cbe\u786e\u7387.*?([0-9.]+).*?\u53ec\u56de\u7387.*?([0-9.]+).*?F1.*?([0-9.]+)",
+                content,
+                re.DOTALL,
             )
-        data["classes"] = classes
-        return data
+            for name, sup, prec, rec, f1 in class_blocks:
+                classes.append({
+                    'name': name.strip(),
+                    'support': int(float(sup)),
+                    'precision': float(prec),
+                    'recall': float(rec),
+                    'f1-score': float(f1)
+                })
+
+        if classes:
+            data['classes'] = classes
+
+        return data if data else None
 
     # ----------------- 工具方法 -----------------
 
@@ -210,22 +333,34 @@ class Page6Handler(QObject):
             else:
                 self._parent.close_state_tooltip()
 
-    def _check_required_assets(self, root_dir: str):
-        apriori_dir = os.path.join(root_dir, "result", "apriori_results")
-        bayesian_dir = os.path.join(root_dir, "result", "bayesian_results")
-
-        requirements = [
-            ("离散化提升图 (Page2)", os.path.join(apriori_dir, "故障预测规则提升度.png")),
-            ("规则数量对比图 (Page2)", os.path.join(apriori_dir, "离散化方法规则数量对比.png")),
-            ("执行时间对比图 (Page2)", os.path.join(apriori_dir, "离散化方法执行时间对比.png")),
-            ("性能综合对比图 (Page2)", os.path.join(apriori_dir, "离散化方法性能综合对比.png")),
-            ("贝叶斯网络结构图 (Page3)", os.path.join(bayesian_dir, "bn_structure.png")),
-            ("混淆矩阵 (Page4)", os.path.join(bayesian_dir, "confusion_matrix.png")),
-            ("批量预测报告 (Page4)", os.path.join(bayesian_dir, "prediction_report.txt")),
+    def _get_asset_paths(self, root_dir):
+        """获取所有报告资产的路径列表"""
+        apriori_dir = root_dir / "result" / "apriori_results"
+        bayesian_dir = root_dir / "result" / "bayesian_results"
+        
+        return [
+            apriori_dir / "故障预测规则提升度.png",
+            apriori_dir / "离散化方法规则数量对比.png",
+            apriori_dir / "离散化方法执行时间对比.png",
+            apriori_dir / "离散化方法性能综合对比.png",
+            bayesian_dir / "bn_structure.png",
+            bayesian_dir / "confusion_matrix.png",
+            bayesian_dir / "prediction_report.txt",
+            root_dir / "故障预测分析报告.docx",
         ]
 
+    def _check_required_assets(self, root_dir: str, check_docx=False):
+        root_path = Path(root_dir)
+        requirements = self._get_asset_paths(root_path)
+        
+        # 根据参数决定是否检查 docx 文件
+        if not check_docx:
+            requirements = [p for p in requirements if not str(p).endswith('.docx')]
+
         missing = []
-        for description, path in requirements:
-            if not os.path.exists(path):
-                missing.append(f"{description} -> {path}")
+        for path in requirements:
+            if not path.exists():
+                # 提供更友好的描述
+                description = f"{path.parent.name}中的{path.name}"
+                missing.append(description)
         return missing

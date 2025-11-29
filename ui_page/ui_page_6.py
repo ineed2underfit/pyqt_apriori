@@ -27,13 +27,29 @@ class Ui_page_6(object):
         self.verticalLayout.setObjectName(u"verticalLayout")
         self.horizontalLayout = QHBoxLayout()
         self.horizontalLayout.setObjectName(u"horizontalLayout")
-        self.pushButton = QPushButton(page_6)
-        self.pushButton.setObjectName(u"pushButton")
-        self.pushButton.setMinimumSize(QSize(0, 30))
-        self.pushButton.setCheckable(False)
-        self.pushButton.setAutoDefault(True)
+        self.pushButton_export = QPushButton(page_6)
+        self.pushButton_export.setObjectName(u"pushButton_export")
+        sizePolicy = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.pushButton_export.sizePolicy().hasHeightForWidth())
+        self.pushButton_export.setSizePolicy(sizePolicy)
+        self.pushButton_export.setMinimumSize(QSize(0, 30))
+        self.pushButton_export.setCheckable(False)
+        self.pushButton_export.setAutoDefault(True)
 
-        self.horizontalLayout.addWidget(self.pushButton)
+        self.horizontalLayout.addWidget(self.pushButton_export)
+
+        self.pushButton_save = QPushButton(page_6)
+        self.pushButton_save.setObjectName(u"pushButton_save")
+        sizePolicy1 = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
+        sizePolicy1.setHorizontalStretch(0)
+        sizePolicy1.setVerticalStretch(0)
+        sizePolicy1.setHeightForWidth(self.pushButton_save.sizePolicy().hasHeightForWidth())
+        self.pushButton_save.setSizePolicy(sizePolicy1)
+        self.pushButton_save.setMinimumSize(QSize(120, 30))
+
+        self.horizontalLayout.addWidget(self.pushButton_save)
 
 
         self.verticalLayout.addLayout(self.horizontalLayout)
@@ -46,7 +62,7 @@ class Ui_page_6(object):
 
         self.retranslateUi(page_6)
 
-        self.pushButton.setDefault(True)
+        self.pushButton_export.setDefault(True)
 
 
         QMetaObject.connectSlotsByName(page_6)
@@ -54,6 +70,7 @@ class Ui_page_6(object):
 
     def retranslateUi(self, page_6):
         page_6.setWindowTitle(QCoreApplication.translate("page_6", u"Form", None))
-        self.pushButton.setText(QCoreApplication.translate("page_6", u"\u5bfc\u51fa\u8d28\u91cf\u8bc4\u4f30\u62a5\u544a", None))
+        self.pushButton_export.setText(QCoreApplication.translate("page_6", u"\u751f\u6210\u8d28\u91cf\u8bc4\u4f30\u62a5\u544a", None))
+        self.pushButton_save.setText(QCoreApplication.translate("page_6", u"\u5bfc\u51fa\u62a5\u544a", None))
     # retranslateUi
 

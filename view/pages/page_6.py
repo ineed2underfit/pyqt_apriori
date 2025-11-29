@@ -21,7 +21,8 @@ class Page6(QWidget, Ui_page_6):
 
     def bind_event(self):
         # 绑定生成报告按钮
-        self.pushButton.clicked.connect(self.handler.generate_report)
+        self.pushButton_export.clicked.connect(self.handler.generate_report)
+        self.pushButton_save.clicked.connect(self.handler.save_report_assets)
 
     def show_state_tooltip(self, title, content):
         self.loading_bar = ProgressInfoBar(title, content, self)

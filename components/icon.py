@@ -19,6 +19,8 @@ class MyIcon(FluentIconBase, Enum):
     PAGE_BREAK = 'page_break'
     EXTRACTION = 'extraction'
     BRANCH = 'branch'
+    MAGNIFY = 'magnify'
+    IMPORT = 'import'
 
 
     def path(self, theme=Theme.AUTO):
