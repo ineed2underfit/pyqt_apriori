@@ -119,7 +119,11 @@ class BayesianWorker(QObject):
         filename = os.path.basename(self.dataset_path)
         target_path = os.path.join(DATA_DIR, filename)
 
-        if os.path.abspath(self.dataset_path) != os.path.abspath(target_path):
-            shutil.copy2(self.dataset_path, target_path)
+        # 检查文件是否已存在，如果存在则跳过复制，避免权限问题
+        if not os.path.exists(target_path):
+            if os.path.abspath(self.dataset_path) != os.path.abspath(target_path):
+                shutil.copy2(self.dataset_path, target_path)
+        else:
+            self.log_message.emit(f"文件 {filename} 已存在于目标目录，跳过复制。")
 
         return filename

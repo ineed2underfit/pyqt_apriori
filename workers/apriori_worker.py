@@ -64,20 +64,19 @@ class AprioriWorker(QObject):
 
         try:
             self.progress_updated.emit(5, "准备执行规则挖掘...")
-            self.analyzer = EquipmentAnalyzer(file_path=self.dataset_path)
+
+            params = dict(self.params)
+            num_bins_from_params = params.pop('num_bins', 5)  # Default to 5 if not provided
+
+            self.analyzer = EquipmentAnalyzer(
+                file_path=self.dataset_path,
+                num_bins=num_bins_from_params
+            )
 
             if self.dataset_config:
                 self.analyzer.set_dataset_config(self.dataset_config)
             if self.rule_config:
                 self.analyzer.set_rule_config(**self.rule_config)
-
-            params = dict(self.params)
-            num_bins = params.pop('num_bins', None)
-            if num_bins is not None:
-                try:
-                    setattr(self.analyzer, 'num_bins', int(num_bins))
-                except Exception:
-                    pass
 
             if self.data_frame is not None:
                 raw_df = self.data_frame
