@@ -31,7 +31,7 @@
         </size>
        </property>
        <property name="text">
-        <string>生成质量评估报告</string>
+        <string>生成质量评价报告</string>
        </property>
        <property name="checkable">
         <bool>false</bool>

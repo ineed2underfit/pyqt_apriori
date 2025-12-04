@@ -104,7 +104,7 @@ class PageFourHandler(QObject):
         """批量评估成功的回调"""
         html = '<div style="font-size: 10pt; line-height: 1.6; color: #2c3e50;">'
         html += '<div style="padding: 10px 0; border-bottom: 2px solid #3498db; margin-bottom: 10px;">'
-        html += '<span style="font-size: 12pt; font-weight: bold;">📋 批量质量评估报告</span>'
+        html += '<span style="font-size: 12pt; font-weight: bold;">📋 批量质量评价报告</span>'
         html += '</div>'
 
         html += '<pre style="white-space: pre-wrap; word-wrap: break-word; font-family: Consolas, Menlo, monospace; font-size: 9pt; background: #f7f9fb; padding: 10px; border-radius: 6px; border: 1px solid #e3e9ef;">'
@@ -380,7 +380,7 @@ class SinglePredictionDialog(QDialog):
 
     def __init__(self, parent=None, dataset_config_info=None, initial_data=None):
         super().__init__(parent)
-        self.setWindowTitle("单次质量评估")
+        self.setWindowTitle("单次质量评价")
         self.setModal(True)
         self.resize(480, 520)
         self.setMinimumWidth(420)

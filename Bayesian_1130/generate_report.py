@@ -3,7 +3,7 @@ from docx import Document
 from docx.shared import Inches
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 
 # ----------------------------
 # 配置：使用相对路径（假设此脚本位于 Bayesian_1130 目录下）
@@ -12,18 +12,30 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 APRIORI_DIR = os.path.join(BASE_DIR, "result", "apriori_results")
 BAYESIAN_DIR = os.path.join(BASE_DIR, "result", "bayesian_results")
 
-OUTPUT_DOCX = os.path.join(BASE_DIR, "故障预测分析报告.docx")
+# 动态生成报告文件名
+today_str = datetime.now().strftime('%Y-%m-%d')
+OUTPUT_DOCX = os.path.join(BASE_DIR, f"装备使用质量评价分析报告_{today_str}.docx")
+
 
 # ----------------------------
 # 辅助函数：添加带标题的图片
 # ----------------------------
 def add_image_with_caption(doc, img_path, caption_text):
     if os.path.exists(img_path):
-        doc.add_paragraph(caption_text, style='Heading 3')
-        doc.add_picture(img_path, width=Inches(6))
+        p = doc.add_paragraph()
+        p.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+        run = p.add_run()
+        try:
+            run.add_picture(img_path, width=Inches(6.0))
+        except Exception as e:
+            p.text = f"[图片加载失败: {e}]"
+        
+        caption_p = doc.add_paragraph(caption_text, style='Caption')
+        caption_p.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
         doc.add_paragraph()  # 空行
     else:
         doc.add_paragraph(f"[图片缺失: {img_path}]", style='Intense Quote')
+
 
 # ----------------------------
 # 解析 prediction_report.txt
@@ -41,7 +53,7 @@ def parse_prediction_report(report_path):
 
     # 提取每个类别的 precision, recall, f1, support
     class_blocks = re.findall(
-        r"([\u4e00-\u9fa5]+):\s*\n\s*支持样本数.*?(\d+\.?\d*).*?\n\s*精确率.*?([0-9.]+).*?\n\s*召回率.*?([0-9.]+).*?\n\s*F1分数.*?([0-9.]+)",
+        r"([\u4e00-\u9fa5\w\s]+?):\s*?\n\s*支持样本数.*?(\d+\.?\d*).*?\n\s*精确率.*?([0-9.]+).*?\n\s*召回率.*?([0-9.]+).*?\n\s*F1分数.*?([0-9.]+)",
         content, re.DOTALL
     )
     classes = []
@@ -56,18 +68,25 @@ def parse_prediction_report(report_path):
     data["classes"] = classes
     return data
 
+
 # ----------------------------
 # 主程序：生成 Word 报告
 # ----------------------------
 def main():
     doc = Document()
-    # Ensure Word core properties carry current timestamps (avoid legacy defaults).
-    now = datetime.now()
-    doc.core_properties.created = now
-    doc.core_properties.modified = now
+    
+    # 使用标准UTC时间设置文件内部元数据，避免时区问题
+    utc_now = datetime.now(timezone.utc)
+    doc.core_properties.created = utc_now
+    doc.core_properties.modified = utc_now
+
+    # 使用本地时间在报告中显示，符合用户习惯
+    local_now = datetime.now()
 
     # 标题
-    doc.add_heading('质量评价模型分析报告', 0)
+    doc.add_heading('装备使用质量评价分析报告', 0)
+    p = doc.add_paragraph(f"报告生成日期: {local_now.strftime('%Y-%m-%d %H:%M:%S')}")
+    p.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
     doc.add_paragraph()  # 空行
 
     # ============ Apriori 数据挖掘板块 ============
@@ -75,10 +94,10 @@ def main():
     doc.add_paragraph("本部分对不同离散化方法在Apriori算法中的性能进行了全面评估，包括生成规则的数量、执行时间以及综合性能对比。")
 
     apriori_images = [
-        ("故障预测规则提升度.png", "故障预测规则提升度"),
-        ("离散化方法规则数量对比.png", "各离散化方法生成规则数量对比"),
-        ("离散化方法执行时间对比.png", "各离散化方法执行时间对比"),
-        ("离散化方法性能综合对比.png", "离散化方法性能综合对比 (执行时间 vs 规则数量)"),
+        ("故障预测规则提升度.png", "图1-1 故障预测规则提升度"),
+        ("离散化方法规则数量对比.png", "图1-2 各离散化方法生成规则数量对比"),
+        ("离散化方法执行时间对比.png", "图1-3 各离散化方法执行时间对比"),
+        ("离散化方法性能综合对比.png", "图1-4 离散化方法性能综合对比 (执行时间 vs 规则数量)"),
     ]
 
     for filename, caption in apriori_images:
@@ -91,19 +110,19 @@ def main():
 
     # 插入 BN 结构图
     bn_img = os.path.join(BAYESIAN_DIR, "bn_structure.png")
-    add_image_with_caption(doc, bn_img, "贝叶斯网络结构图")
+    add_image_with_caption(doc, bn_img, "图2-1 贝叶斯网络结构图")
 
     # 插入混淆矩阵
     cm_img = os.path.join(BAYESIAN_DIR, "confusion_matrix.png")
-    add_image_with_caption(doc, cm_img, "混淆矩阵")
+    add_image_with_caption(doc, cm_img, "图2-2 模型预测结果混淆矩阵")
 
     # 解析并插入预测报告
     report_path = os.path.join(BAYESIAN_DIR, "prediction_report.txt")
     report_data = parse_prediction_report(report_path)
 
     if report_data:
-        doc.add_heading("模型性能评估报告", level=2)
-        doc.add_paragraph(f"模型的整体准确率为 **{report_data['accuracy']:.4f}**。")
+        doc.add_heading("2.1 模型性能评估报告", level=2)
+        doc.add_paragraph(f"模型的整体准确率为 **{report_data['accuracy']:.4f}**。下表为详细分类报告：")
 
         # 创建表格
         table = doc.add_table(rows=1, cols=5)
@@ -115,6 +134,11 @@ def main():
         hdr_cells[3].text = 'F1分数 (F1-Score)'
         hdr_cells[4].text = '支持样本数 (Support)'
 
+        for cell in hdr_cells:
+            cell.paragraphs[0].runs[0].font.bold = True
+            cell.paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+
+
         for cls in report_data["classes"]:
             row_cells = table.add_row().cells
             row_cells[0].text = cls["name"]
@@ -122,6 +146,8 @@ def main():
             row_cells[2].text = f"{cls['recall']:.2f}"
             row_cells[3].text = f"{cls['f1-score']:.2f}"
             row_cells[4].text = str(cls["support"])
+            for cell in row_cells:
+                cell.paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
 
         doc.add_paragraph()
         doc.add_paragraph("**结论:**")

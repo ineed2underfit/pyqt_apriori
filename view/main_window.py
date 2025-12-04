@@ -108,7 +108,7 @@ class MainWindow(FluentWindow):
             {'widget': self.pageOne, 'icon': MyIcon.IMPORT, 'text': '数据导入'},
             {'widget': self.pageTwo, 'icon': MyIcon.EXTRACTION, 'text': '规则挖掘'},
             {'widget': self.page3, 'icon': MyIcon.BRANCH, 'text': '贝叶斯网络'},
-            {'widget': self.page4, 'icon': MyIcon.EXCEL, 'text': '质量评估'},
+            {'widget': self.page4, 'icon': MyIcon.EXCEL, 'text': '质量评价'},
             {'widget': self.page5, 'icon': MyIcon.MAGNIFY, 'text': '历史查询'},
             {'widget': self.page6, 'icon': MyIcon.SAVE, 'text': '报告生成'}
         ]
@@ -119,7 +119,7 @@ class MainWindow(FluentWindow):
     def init_window(self):
         if sys.platform != "darwin":
             self.setWindowIcon(QIcon(':/resource/images/army_icon.png'))
-            self.setWindowTitle('装备质量评估系统')
+            self.setWindowTitle('装备使用质量评价系统')
         self.resize(1000, 800)
         self.move((self.screen().size().width() - self.width()) / 2,
                   (self.screen().size().height() - self.height()) / 2)

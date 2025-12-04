@@ -70,7 +70,7 @@ class Ui_page_6(object):
 
     def retranslateUi(self, page_6):
         page_6.setWindowTitle(QCoreApplication.translate("page_6", u"Form", None))
-        self.pushButton_export.setText(QCoreApplication.translate("page_6", u"\u751f\u6210\u8d28\u91cf\u8bc4\u4f30\u62a5\u544a", None))
+        self.pushButton_export.setText(QCoreApplication.translate("page_6", u"\u751f\u6210\u8d28\u91cf\u8bc4\u4ef7\u62a5\u544a", None))
         self.pushButton_save.setText(QCoreApplication.translate("page_6", u"\u5bfc\u51fa\u62a5\u544a", None))
     # retranslateUi
 

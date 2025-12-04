@@ -147,8 +147,8 @@ class Ui_page_4(object):
     def retranslateUi(self, page_4):
         page_4.setWindowTitle(QCoreApplication.translate("page_4", u"Form", None))
         self.pushButton_import.setText(QCoreApplication.translate("page_4", u"\u5bfc\u5165\u6d4b\u8bd5\u6570\u636e", None))
-        self.pushButton_assessment.setText(QCoreApplication.translate("page_4", u"\u6279\u91cf\u8d28\u91cf\u8bc4\u4f30", None))
-        self.pushButton_solely.setText(QCoreApplication.translate("page_4", u"\u5355\u6b21\u8d28\u91cf\u8bc4\u4f30", None))
+        self.pushButton_assessment.setText(QCoreApplication.translate("page_4", u"\u6279\u91cf\u8d28\u91cf\u8bc4\u4ef7", None))
+        self.pushButton_solely.setText(QCoreApplication.translate("page_4", u"\u5355\u6b21\u8d28\u91cf\u8bc4\u4ef7", None))
         self.textEdit_solely.setMarkdown("")
     # retranslateUi
 

@@ -53,7 +53,7 @@
               </size>
              </property>
              <property name="text">
-              <string>批量质量评估</string>
+              <string>批量质量评价</string>
              </property>
              <property name="autoDefault">
               <bool>false</bool>
@@ -115,7 +115,7 @@
                   </size>
                  </property>
                  <property name="text">
-                  <string>单次质量评估</string>
+                  <string>单次质量评价</string>
                  </property>
                  <property name="autoDefault">
                   <bool>false</bool>

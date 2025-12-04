@@ -6,6 +6,7 @@ from typing import Dict, List
 from PySide6.QtWidgets import QFileDialog
 import shutil
 from pathlib import Path
+from datetime import datetime
 
 from PySide6.QtCore import QObject
 
@@ -41,12 +42,16 @@ class Page6Handler(QObject):
         self._parent.pushButton_export.setEnabled(False)
 
         try:
-            html_content = self._build_html_from_assets(bayesian_root)
+            # First, generate the docx report so it's available for asset building
             try:
                 from Bayesian_1130.generate_report import main as generate_docx_report
                 generate_docx_report()
             except Exception as doc_exc:
                 show_dialog(self._parent, f"在后台生成 Word 报告失败:\n{doc_exc}", "警告")
+            
+            # Then, build the HTML content, which can now find the generated docx
+            html_content = self._build_html_from_assets(bayesian_root)
+
         except Exception as exc:
             show_dialog(self._parent, f"生成报告内容失败:\n{exc}", "错误")
             self._parent.textEdit.clear()
@@ -72,10 +77,13 @@ class Page6Handler(QObject):
             )
             return
 
-        default_save_path = Path.home() / "故障预测分析报告"
+        today_str = datetime.now().strftime('%Y-%m-%d')
+        default_folder_name = f"装备使用质量评价分析报告_{today_str}"
+        default_save_path = Path.home() / default_folder_name
+
         target_path, _ = QFileDialog.getSaveFileName(
             self._parent,
-            "选择导出位置和报告名称",
+            "选择导出文件夹名称",
             str(default_save_path),
             "All Files (*)",
         )
@@ -84,6 +92,7 @@ class Page6Handler(QObject):
             return
 
         target_p = Path(target_path)
+        # Use the name provided by the user as the folder name
         export_dir = target_p.parent / target_p.stem
         try:
             export_dir.mkdir(parents=True, exist_ok=True)
@@ -94,7 +103,7 @@ class Page6Handler(QObject):
         source_assets = self._get_asset_paths(bayesian_root)
         try:
             for asset_path in source_assets:
-                if asset_path.exists():
+                if asset_path and asset_path.exists():
                     dest_path = Path(shutil.copy2(asset_path, export_dir))
                     # Ensure exported Word 报告的文件时间为最新，避免旧时间戳
                     if asset_path.suffix.lower() == ".docx":
@@ -103,21 +112,11 @@ class Page6Handler(QObject):
                             os.utime(dest_path, (now, now))
                         except OSError:
                             pass
-                        # 同步 Word 内部核心属性时间，避免 2013 “创建内容时间”
-                        try:
-                            doc = Document(dest_path)
-                            current = doc.core_properties
-                            current.created = current.modified = current.last_printed = None
-                            from datetime import datetime
-                            ts = datetime.now()
-                            current.created = ts
-                            current.modified = ts
-                            doc.save(dest_path)
-                        except Exception:
-                            # 若写入元数据失败，不阻断导出
-                            pass
                 else:
-                    raise FileNotFoundError(f"源文件在复制时丢失: {asset_path}")
+                    # Raise a more informative error if a critical asset is missing during copy
+                    if asset_path:
+                         raise FileNotFoundError(f"源文件在复制时丢失: {asset_path.name}")
+
         except (shutil.Error, FileNotFoundError) as e:
             show_dialog(self._parent, f"复制文件到导出目录时出错：\n{e}", "错误")
             return
@@ -133,7 +132,10 @@ class Page6Handler(QObject):
         apriori_dir = os.path.join(root_dir, "result", "apriori_results")
         bayesian_dir = os.path.join(root_dir, "result", "bayesian_results")
         report_path = os.path.join(bayesian_dir, "prediction_report.txt")
-        doc_path = os.path.join(root_dir, "故障预测分析报告.docx")
+        
+        report_docx_path = self._find_latest_report_docx(Path(root_dir))
+        doc_path_str = str(report_docx_path) if report_docx_path else ""
+
 
         apriori_images = [
             ("故障预测规则提升度.png", "故障预测规则提升度对比"),
@@ -239,9 +241,9 @@ class Page6Handler(QObject):
         html_parts.append("</div>")
 
 
-        if os.path.exists(doc_path):
+        if doc_path_str and os.path.exists(doc_path_str):
             html_parts.append(
-                f"<p class='docx-tip'>完整的 Word 版本报告已保存在：{html.escape(doc_path)}</p>"
+                f"<p class='docx-tip'>完整的 Word 版本报告已保存在：{html.escape(doc_path_str)}</p>"
             )
 
         html_parts.append("</div></body></html>")
@@ -349,6 +351,29 @@ class Page6Handler(QObject):
         return data if data else None
 
     # ----------------- 工具方法 -----------------
+    
+    def _find_latest_report_docx(self, root_dir: Path) -> Path | None:
+        """Finds the most recently modified report docx file."""
+        latest_file = None
+        latest_time = 0
+        
+        # Search for new format
+        for file_path in root_dir.glob("装备使用质量评价分析报告_*.docx"):
+            try:
+                mtime = file_path.stat().st_mtime
+                if mtime > latest_time:
+                    latest_time = mtime
+                    latest_file = file_path
+            except FileNotFoundError:
+                continue
+        
+        # If no new format found, check for the old format as a fallback
+        if not latest_file:
+            old_file = root_dir / "故障预测分析报告.docx"
+            if old_file.exists():
+                return old_file
+
+        return latest_file
 
     def _set_loading(self, is_loading: bool, title: str = "", content: str = ""):
         if hasattr(self._parent, "show_state_tooltip"):
@@ -359,10 +384,13 @@ class Page6Handler(QObject):
 
     def _get_asset_paths(self, root_dir):
         """获取所有报告资产的路径列表"""
-        apriori_dir = root_dir / "result" / "apriori_results"
-        bayesian_dir = root_dir / "result" / "bayesian_results"
+        root_path = Path(root_dir)
+        apriori_dir = root_path / "result" / "apriori_results"
+        bayesian_dir = root_path / "result" / "bayesian_results"
         
-        return [
+        report_docx_path = self._find_latest_report_docx(root_path)
+
+        paths = [
             apriori_dir / "故障预测规则提升度.png",
             apriori_dir / "离散化方法规则数量对比.png",
             apriori_dir / "离散化方法执行时间对比.png",
@@ -370,21 +398,32 @@ class Page6Handler(QObject):
             bayesian_dir / "bn_structure.png",
             bayesian_dir / "confusion_matrix.png",
             bayesian_dir / "prediction_report.txt",
-            root_dir / "故障预测分析报告.docx",
         ]
+        if report_docx_path:
+            paths.append(report_docx_path)
+        
+        return paths
 
     def _check_required_assets(self, root_dir: str, check_docx=False):
         root_path = Path(root_dir)
         requirements = self._get_asset_paths(root_path)
         
-        # 根据参数决定是否检查 docx 文件
+        # Find the docx path from the requirements list to decide whether to check it
+        docx_in_list = any(str(p).endswith('.docx') for p in requirements)
+
         if not check_docx:
             requirements = [p for p in requirements if not str(p).endswith('.docx')]
 
         missing = []
         for path in requirements:
-            if not path.exists():
-                # 提供更友好的描述
-                description = f"{path.parent.name}中的{path.name}"
-                missing.append(description)
+            if not path or not path.exists():
+                # Provide a more user-friendly description for missing files
+                if path:
+                    description = f"{path.parent.name}中的{path.name}"
+                    missing.append(description)
+        
+        # Special check for docx if it was required but not found by _get_asset_paths
+        if check_docx and not docx_in_list:
+            missing.append("Bayesian_1130中的装备使用质量评价分析报告_*.docx")
+            
         return missing
