@@ -81,14 +81,26 @@ view/ui_main_window.py
 Bayesian_1130/result/apriori_results/*
 !Bayesian_1130/result/apriori_results/
 
+Bayesian_1130_revised/result/apriori_results/*
+!Bayesian_1130_revised/result/apriori_results/
+
 Bayesian_1130/result/bayesian_results/*
 !Bayesian_1130/result/bayesian_results/
+
+Bayesian_1130_revised/result/bayesian_results/*
+!Bayesian_1130_revised/result/bayesian_results/
 
 Bayesian_1130/datas/apriori_results/*
 !Bayesian_1130/datas/apriori_results/
 
+Bayesian_1130_revised/datas/apriori_results/*
+!Bayesian_1130_revised/datas/apriori_results/
+
 Bayesian_1130/Bayesian/models/*
 !Bayesian_1130/Bayesian/models/
+
+Bayesian_1130_revised/Bayesian/models/*
+!Bayesian_1130_revised/Bayesian/models/
 
 apriori/apriori_results/*
 !apriori/apriori_results/
