@@ -92,6 +92,20 @@
   1) `python pack_resources.py`（若 .ui/.qrc 有改动）  
   2) `pyinstaller --clean pyqt_apriori.spec`
 
+## 9) 分层与联动
+系统将功能拆分为清晰的 5 个层次，以实现职责分离与松耦合：
+- **视图层 / UI 定义层（View，view/pages/*.py + ui_page/**）**：仅负责界面显示、控件初始化和用户输入事件绑定；发出信号，不做耗时运算。
+- **控制层 / 业务逻辑层（Handler，view/pages/*_handler.py）**：处理业务编排与数据校验，接收 View 信号，调用 Service/Worker，整理结果并回写 View。
+- **服务层（Service，services/**）**：封装算法/数据接口，为 Handler 提供可复用的业务服务。
+- **工作层（Worker，workers/**）**：耗时任务在线程中执行，通过信号将完成/错误结果回传 Handler，避免阻塞 UI。
+- **核心数据与资产层（Bayesian_1130/**）**：模型、结果、报告生成脚本与落地文件的集中存储与读写。
+
+层间联动：
+- View → Handler：用户事件触发信号，Handler 负责业务决策与调度。
+- Handler → Service/Worker：同步调用 Service；耗时操作使用 Worker（QThread）异步执行。
+- Worker → Handler → View：Worker 发出完成/错误信号，Handler 处理并更新 View。
+- Handler/Service → 核心资产：读写 `Bayesian_1130` 下的模型、结果、报告文件，Page6 汇总导出。
+
 ## 9) 目录速览
 - `entry.py` — 应用入口
 - `view/main_window.py` — 主窗体与导航
