@@ -1,0 +1,310 @@
+[
+  {
+    "original_rule": "极高振动频率 → 泵磨损",
+    "antecedents_mapped": [
+      {
+        "node_name": "极高振动频率",
+        "original_column": "振动频率"
+      }
+    ],
+    "consequent": "泵磨损",
+    "quality_score": 3.8477508690142614,
+    "confidence": 1.0,
+    "lift": 14.81,
+    "support": 0.0675
+  },
+  {
+    "original_rule": "department_生产部A ∧ 低油温 ∧ 极高振动频率 → 泵磨损",
+    "antecedents_mapped": [
+      {
+        "node_name": "department_生产部A",
+        "original_column": "department"
+      },
+      {
+        "node_name": "低油温",
+        "original_column": "油温"
+      },
+      {
+        "node_name": "极高振动频率",
+        "original_column": "振动频率"
+      }
+    ],
+    "consequent": "泵磨损",
+    "quality_score": 1.6885998045718233,
+    "confidence": 1.0,
+    "lift": 14.81,
+    "support": 0.013
+  },
+  {
+    "original_rule": "中流量 ∧ 极低油温 ∧ 极高振动频率 → 泵磨损",
+    "antecedents_mapped": [
+      {
+        "node_name": "中流量",
+        "original_column": "流量"
+      },
+      {
+        "node_name": "极低油温",
+        "original_column": "油温"
+      },
+      {
+        "node_name": "极高振动频率",
+        "original_column": "振动频率"
+      }
+    ],
+    "consequent": "泵磨损",
+    "quality_score": 1.5532859041399945,
+    "confidence": 1.0,
+    "lift": 14.81,
+    "support": 0.011
+  },
+  {
+    "original_rule": "极高油温 → 油温过高",
+    "antecedents_mapped": [
+      {
+        "node_name": "极高油温",
+        "original_column": "油温"
+      }
+    ],
+    "consequent": "油温过高",
+    "quality_score": 3.2147949312514474,
+    "confidence": 1.0,
+    "lift": 13.07,
+    "support": 0.0605
+  },
+  {
+    "original_rule": "department_生产部A ∧ 低油液清洁度 ∧ 极高油温 → 油温过高",
+    "antecedents_mapped": [
+      {
+        "node_name": "department_生产部A",
+        "original_column": "department"
+      },
+      {
+        "node_name": "低油液清洁度",
+        "original_column": "油液清洁度"
+      },
+      {
+        "node_name": "极高油温",
+        "original_column": "油温"
+      }
+    ],
+    "consequent": "油温过高",
+    "quality_score": 1.6272018774571273,
+    "confidence": 1.0,
+    "lift": 13.07,
+    "support": 0.0155
+  },
+  {
+    "original_rule": "department_液压部B ∧ 极高油温 → 油温过高",
+    "antecedents_mapped": [
+      {
+        "node_name": "department_液压部B",
+        "original_column": "department"
+      },
+      {
+        "node_name": "极高油温",
+        "original_column": "油温"
+      }
+    ],
+    "consequent": "油温过高",
+    "quality_score": 1.6007415469088069,
+    "confidence": 1.0,
+    "lift": 13.07,
+    "support": 0.015
+  },
+  {
+    "original_rule": "高油温 → 污染故障",
+    "antecedents_mapped": [
+      {
+        "node_name": "高油温",
+        "original_column": "油温"
+      }
+    ],
+    "consequent": "污染故障",
+    "quality_score": 2.3682456755835792,
+    "confidence": 0.8105,
+    "lift": 10.53,
+    "support": 0.077
+  },
+  {
+    "original_rule": "department_生产部A ∧ 极低油液清洁度 ∧ 高油温 → 污染故障",
+    "antecedents_mapped": [
+      {
+        "node_name": "department_生产部A",
+        "original_column": "department"
+      },
+      {
+        "node_name": "极低油液清洁度",
+        "original_column": "油液清洁度"
+      },
+      {
+        "node_name": "高油温",
+        "original_column": "油温"
+      }
+    ],
+    "consequent": "污染故障",
+    "quality_score": 1.5937100018218797,
+    "confidence": 0.9149,
+    "lift": 11.88,
+    "support": 0.0215
+  },
+  {
+    "original_rule": "高油温 ∧ 高液压压力 → 污染故障",
+    "antecedents_mapped": [
+      {
+        "node_name": "高油温",
+        "original_column": "油温"
+      },
+      {
+        "node_name": "高液压压力",
+        "original_column": "液压压力"
+      }
+    ],
+    "consequent": "污染故障",
+    "quality_score": 1.5869423160826963,
+    "confidence": 0.8507,
+    "lift": 11.05,
+    "support": 0.0285
+  },
+  {
+    "original_rule": "低液压压力 ∧ 极低流量 → 阀门故障",
+    "antecedents_mapped": [
+      {
+        "node_name": "低液压压力",
+        "original_column": "液压压力"
+      },
+      {
+        "node_name": "极低流量",
+        "original_column": "流量"
+      }
+    ],
+    "consequent": "阀门故障",
+    "quality_score": 3.1931050718696996,
+    "confidence": 1.0,
+    "lift": 10.2,
+    "support": 0.098
+  },
+  {
+    "original_rule": "department_生产部A ∧ 极低流量 → 阀门故障",
+    "antecedents_mapped": [
+      {
+        "node_name": "department_生产部A",
+        "original_column": "department"
+      },
+      {
+        "node_name": "极低流量",
+        "original_column": "流量"
+      }
+    ],
+    "consequent": "阀门故障",
+    "quality_score": 2.03756585328296,
+    "confidence": 0.9127,
+    "lift": 9.31,
+    "support": 0.0575
+  },
+  {
+    "original_rule": "低液压压力 → 阀门故障",
+    "antecedents_mapped": [
+      {
+        "node_name": "低液压压力",
+        "original_column": "液压压力"
+      }
+    ],
+    "consequent": "阀门故障",
+    "quality_score": 1.948349130633892,
+    "confidence": 0.7809,
+    "lift": 7.97,
+    "support": 0.098
+  },
+  {
+    "original_rule": "极高流量 → 液压泄漏",
+    "antecedents_mapped": [
+      {
+        "node_name": "极高流量",
+        "original_column": "流量"
+      }
+    ],
+    "consequent": "液压泄漏",
+    "quality_score": 3.1221883351265025,
+    "confidence": 1.0,
+    "lift": 9.8,
+    "support": 0.1015
+  },
+  {
+    "original_rule": "极低液压压力 → 液压泄漏",
+    "antecedents_mapped": [
+      {
+        "node_name": "极低液压压力",
+        "original_column": "液压压力"
+      }
+    ],
+    "consequent": "液压泄漏",
+    "quality_score": 2.6658882197121474,
+    "confidence": 1.0,
+    "lift": 9.8,
+    "support": 0.074
+  },
+  {
+    "original_rule": "department_生产部A ∧ 极高流量 → 液压泄漏",
+    "antecedents_mapped": [
+      {
+        "node_name": "department_生产部A",
+        "original_column": "department"
+      },
+      {
+        "node_name": "极高流量",
+        "original_column": "流量"
+      }
+    ],
+    "consequent": "液压泄漏",
+    "quality_score": 2.191346617949794,
+    "confidence": 1.0,
+    "lift": 9.8,
+    "support": 0.05
+  },
+  {
+    "original_rule": "低流量 → 正常",
+    "antecedents_mapped": [
+      {
+        "node_name": "低流量",
+        "original_column": "流量"
+      }
+    ],
+    "consequent": "正常",
+    "quality_score": 0.4338469515593028,
+    "confidence": 0.7519,
+    "lift": 1.3,
+    "support": 0.197
+  },
+  {
+    "original_rule": "极低油温 ∧ 高流量 → 正常",
+    "antecedents_mapped": [
+      {
+        "node_name": "极低油温",
+        "original_column": "油温"
+      },
+      {
+        "node_name": "高流量",
+        "original_column": "流量"
+      }
+    ],
+    "consequent": "正常",
+    "quality_score": 0.4039709924248424,
+    "confidence": 0.9351,
+    "lift": 1.61,
+    "support": 0.072
+  },
+  {
+    "original_rule": "高液压压力 → 正常",
+    "antecedents_mapped": [
+      {
+        "node_name": "高液压压力",
+        "original_column": "液压压力"
+      }
+    ],
+    "consequent": "正常",
+    "quality_score": 0.403492168139606,
+    "confidence": 0.7236,
+    "lift": 1.25,
+    "support": 0.199
+  }
+]

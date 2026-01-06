@@ -12,10 +12,6 @@ from datetime import datetime
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 from pgmpy.inference import VariableElimination
 
-_THIS_DIR = os.path.dirname(os.path.abspath(__file__))
-if _THIS_DIR not in sys.path:
-    sys.path.insert(0, _THIS_DIR)
-
 # 引入健康度评价模块
 try:
     from health_assessment import HealthAssessor
@@ -276,81 +272,6 @@ def get_user_input(binning_config):
 # ==========================================
 # 4. 主程序入口
 # ==========================================
-
-def run_single_assessment(raw_input, history_data_path, model_path=None,
-    binning_config_path=None, rules_json_path=None, rules_csv_path=None, result_dir=None):
-    """Run a single assessment using UI-provided input and a history dataset."""
-    if not history_data_path:
-        raise FileNotFoundError("缺少历史数据路径，请先在 Page1 导入数据集")
-    if not os.path.exists(history_data_path):
-        raise FileNotFoundError(f"历史数据集不存在: {history_data_path}")
-
-    model_path = model_path or MODEL_PATH
-    binning_config_path = binning_config_path or BINNING_CONFIG_PATH
-    rules_json_path = rules_json_path or RULES_JSON_PATH
-    rules_csv_path = rules_csv_path or RULES_CSV_PATH
-    result_dir = result_dir or RESULT_DIR
-    os.makedirs(result_dir, exist_ok=True)
-
-    binning_config = load_binning_config(binning_config_path)
-    json_rules = load_network_rules(rules_json_path)
-    model = load_model(model_path)
-
-    dataset_config = binning_config['metadata']['dataset_config']
-    target_col = dataset_config['target_col']
-    normal_val = dataset_config.get('normal_value')
-
-    user_input_discrete = discretize_using_json(raw_input, binning_config, debug=False)
-    status, prob_dict = infer_single_sample(model, user_input_discrete, target_col)
-    if not status:
-        raise RuntimeError("预测失败")
-
-    if status == normal_val:
-        if not HealthAssessor:
-            raise RuntimeError("健康度评估模块不可用")
-
-        assessor = HealthAssessor(history_data_path, binning_config_path, rules_csv_path)
-
-        def predict_cb(disc):
-            _, p = infer_single_sample(model, disc, target_col)
-            return p.get(normal_val, 0) if p else 0
-
-        def disc_cb(raw):
-            return discretize_using_json(raw, binning_config)
-
-        res = assessor.assess(raw_input, user_input_discrete, prob_dict.get(normal_val, 0.0), predict_cb, disc_cb)
-        grade = assessor.get_grade(res['score'])
-
-        report_path = os.path.join(result_dir, "health_assessment_single_report.txt")
-        with open(report_path, 'w', encoding='utf-8') as f:
-            f.write("=== 单机健康度评估报告 ===\n")
-            f.write(f"测试时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-            f.write(f"设备状态: {status}\n")
-            f.write(f"综合得分: {res['score']:.1f}\n")
-            f.write(f"等级评定: {grade}\n")
-            f.write("-" * 30 + "\n")
-            f.write(f"CI (置信度): {res['metrics']['CI']:.4f}\n")
-            f.write(f"RI (风险度): {res['metrics']['RI']:.4f}\n")
-            f.write(f"FMI (裕度): {res['metrics']['FMI']:.4f}\n")
-            f.write(f"RSI (稳定性): {res['metrics']['RSI']:.4f}\n")
-            f.write("-" * 30 + "\n")
-            f.write(f"原始输入: {raw_input}\n")
-            f.write(f"离散特征: {user_input_discrete}\n")
-    else:
-        diagnosis_log = diagnose_fault(status, user_input_discrete, json_rules)
-        report_path = os.path.join(result_dir, "fault_diagnosis_single_report.txt")
-        with open(report_path, 'w', encoding='utf-8') as f:
-            f.write("=== 单机故障诊断报告 ===\n")
-            f.write(f"测试时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-            f.write(f"预测结论: {status}\n")
-            f.write(f"故障概率: {prob_dict.get(status, 0.0):.2%}\n")
-            f.write("-" * 30 + "\n")
-            f.write(f"原始输入: {raw_input}\n")
-            f.write(f"离散特征: {user_input_discrete}\n")
-            f.write("-" * 30 + "\n")
-            f.write(diagnosis_log)
-
-    return status, prob_dict
 
 def main_one():
     """单机交互模式"""

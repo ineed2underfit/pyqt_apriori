@@ -40,18 +40,32 @@ def add_image_with_caption(doc, img_path, caption_text):
 # ----------------------------
 # 解析 prediction_report.txt
 # ----------------------------
+def _read_text_with_fallback(path):
+    for encoding in ("utf-8-sig", "utf-8", "gbk"):
+        try:
+            with open(path, "r", encoding=encoding) as f:
+                return f.read()
+        except UnicodeDecodeError:
+            continue
+    with open(path, "r", encoding="utf-8", errors="replace") as f:
+        return f.read()
+
+
 def parse_prediction_report(report_path):
     if not os.path.exists(report_path):
         return None
-    with open(report_path, "r", encoding="utf-8") as f:
-        content = f.read()
+    content = _read_text_with_fallback(report_path)
 
     data = {}
-    # 提取总体准确度
-    acc_match = re.search(r"总体准确度:\s*([0-9.]+)", content)
-    data["accuracy"] = float(acc_match.group(1)) if acc_match else None
+    # 提取总体准确度/准确率
+    acc_match = re.search(r"(总体准确率|总体准确度)\s*([0-9.]+)", content)
+    if acc_match:
+        data["accuracy"] = float(acc_match.group(2))
+    else:
+        acc_match = re.search(r"^\s*accuracy\s+([0-9.]+)\s", content, re.MULTILINE)
+        data["accuracy"] = float(acc_match.group(1)) if acc_match else None
 
-    # 提取每个类别的 precision, recall, f1, support
+    # 旧版分类报告格式
     class_blocks = re.findall(
         r"([\u4e00-\u9fa5\w\s]+?):\s*?\n\s*支持样本数.*?(\d+\.?\d*).*?\n\s*精确率.*?([0-9.]+).*?\n\s*召回率.*?([0-9.]+).*?\n\s*F1分数.*?([0-9.]+)",
         content, re.DOTALL
@@ -65,6 +79,28 @@ def parse_prediction_report(report_path):
             "recall": float(rec),
             "f1-score": float(f1)
         })
+
+    # 新版 classification_report 格式
+    if not classes:
+        for line in content.splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            if line.startswith(("precision", "accuracy", "macro avg", "weighted avg")):
+                continue
+            if line.startswith(("总体准确率", "总体准确度", "数据源", "测试时间")):
+                continue
+            match = re.match(r"^(.+?)\s+([0-9.]+)\s+([0-9.]+)\s+([0-9.]+)\s+(\d+)\s*$", line)
+            if match:
+                name, prec, rec, f1, sup = match.groups()
+                classes.append({
+                    "name": name.strip(),
+                    "support": int(sup),
+                    "precision": float(prec),
+                    "recall": float(rec),
+                    "f1-score": float(f1)
+                })
+
     data["classes"] = classes
     return data
 
@@ -122,7 +158,10 @@ def main():
 
     if report_data:
         doc.add_heading("2.1 模型性能评估报告", level=2)
-        doc.add_paragraph(f"模型的整体准确率为 **{report_data['accuracy']:.4f}**。下表为详细分类报告：")
+        if report_data.get("accuracy") is not None:
+            doc.add_paragraph(f"模型的整体准确率为 **{report_data['accuracy']:.4f}**。下表为详细分类报告：")
+        else:
+            doc.add_paragraph("模型的整体准确率未在 prediction_report.txt 中解析到。下表为详细分类报告：")
 
         # 创建表格
         table = doc.add_table(rows=1, cols=5)

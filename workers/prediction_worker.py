@@ -1,8 +1,6 @@
 import importlib.util
 import os
 import shutil
-import pickle
-import pandas as pd
 from contextlib import redirect_stdout
 from PySide6.QtCore import QObject, Signal
 
@@ -15,6 +13,8 @@ COMPREHENSIVE_CONFIG_PATH = str(APRIORI_RESULT_DIR / "完整数据配置.json")
 BASIC_BINNING_PATH = str(APRIORI_RESULT_DIR / "分箱配置.json")
 RESULT_DIR = str(BAYESIAN_ROOT / "result" / "bayesian_results")
 DEFAULT_MODEL_PATH = str(BAYESIAN_ROOT / "Bayesian" / "models" / "final_bn_model.pkl")
+RULES_CSV_PATH = str(APRIORI_RESULT_DIR / "关联规则分析结果.csv")
+RULES_JSON_PATH = str(BAYESIAN_ROOT / "result" / "bayesian_results" / "network_rules_with_mapping.json")
 
 os.makedirs(DATA_DIR, exist_ok=True)
 os.makedirs(RESULT_DIR, exist_ok=True)
@@ -75,10 +75,11 @@ class PredictionWorker(QObject):
     progress_updated = Signal(int)
     log_message = Signal(str)
 
-    def __init__(self, model_path, data):
+    def __init__(self, model_path, data, history_data_path=None):
         super().__init__()
         self.model_path = model_path or DEFAULT_MODEL_PATH
         self.data = data
+        self.history_data_path = history_data_path
 
     def run(self):
         try:
@@ -127,77 +128,27 @@ class PredictionWorker(QObject):
 
     def _run_single(self, data_dict):
         self.progress_updated.emit(10)
-        with open(self.model_path, 'rb') as f:
-            model = pickle.load(f)
-        self.progress_updated.emit(30)
-
         binning_config_path = _resolve_binning_config_path()
+        if not self.history_data_path:
+            raise FileNotFoundError("请先在 Page1 导入并配置数据集")
+        if not os.path.exists(self.history_data_path):
+            raise FileNotFoundError(f"历史数据集不存在: {self.history_data_path}")
+
+        predict_status_module.MODEL_PATH = self.model_path
         predict_status_module.BINNING_CONFIG_PATH = binning_config_path
-        binning_config = predict_status_module.load_binning_config(binning_config_path)
-        dataset_config = binning_config["metadata"]["dataset_config"]
-        target_col = dataset_config["target_col"]
+        predict_status_module.RULES_JSON_PATH = RULES_JSON_PATH
+        predict_status_module.RULES_CSV_PATH = RULES_CSV_PATH
+        predict_status_module.RESULT_DIR = RESULT_DIR
+
         single_input = dict(data_dict)
-        if target_col not in single_input:
-            single_input[target_col] = dataset_config.get("normal_value", "正常")
-
-        df_single = pd.DataFrame([single_input])
-        discrete = predict_status_module.discretize_raw_data_for_prediction(df_single, binning_config)
-        self.progress_updated.emit(60)
-
-        normal_value = dataset_config.get("normal_value") or \
-            binning_config.get("data_info", {}).get("target_info", {}).get("normal_value")
-        predictions, prediction_probs = predict_status_module.predict_with_model(
-            model,
-            discrete,
-            target_col=target_col,
-            normal_value=normal_value or "正常"
+        status, prob_dict = predict_status_module.run_single_assessment(
+            single_input,
+            history_data_path=self.history_data_path,
+            model_path=self.model_path,
+            binning_config_path=binning_config_path,
+            rules_json_path=RULES_JSON_PATH,
+            rules_csv_path=RULES_CSV_PATH,
+            result_dir=RESULT_DIR
         )
         self.progress_updated.emit(100)
-
-        prediction = predictions[0] if predictions else "未知"
-        probs = prediction_probs[0] if prediction_probs else {}
-        try:
-            report_text = self._generate_single_report(prediction, probs, binning_config, data_dict)
-            report_path = os.path.join(RESULT_DIR, "single_prediction_report.txt")
-            with open(report_path, 'w', encoding='utf-8') as f:
-                f.write(report_text)
-        except Exception as exc:
-            if self.log_message:
-                self.log_message.emit(f"⚠️ 生成单次报告失败: {exc}")
-        self.single_prediction_finished.emit(prediction, data_dict, probs)
-
-    def _generate_single_report(self, prediction, probs, binning_config, input_data):
-        target_info = binning_config.get("data_info", {}).get("target_info", {})
-        normal_value = target_info.get("normal_value", "")
-        network_rules_path = os.path.join(RESULT_DIR, "network_rules_with_mapping.json")
-        network_rules = []
-        if os.path.exists(network_rules_path):
-            try:
-                network_rules = predict_status_module.load_network_rules(network_rules_path)
-            except Exception:
-                network_rules = []
-        key_parameters = predict_status_module.get_key_parameters_for_status(prediction, network_rules)
-        key_params_str = "、".join(key_parameters) if key_parameters else "无"
-
-        sorted_probs = sorted(probs.items(), key=lambda x: x[1], reverse=True)
-        report_lines = [
-            "质量评价报告",
-            "===========================",
-            f"最可能的状态是: {prediction}，概率为{sorted_probs[0][1]:.4f}" if sorted_probs else f"最可能的状态是: {prediction}",
-            f"需要特别关注的参数为: {key_params_str}",
-            "",
-            "各状态的预测概率:"
-        ]
-        for status, prob in sorted_probs:
-            suffix = " (最高概率)" if status == prediction else ""
-            report_lines.append(f"  {status}: {prob:.4f}{suffix}")
-
-        report_lines.append("")
-        report_lines.append("输入数据:")
-        for key, value in input_data.items():
-            report_lines.append(f"  {key}: {value}")
-
-        if normal_value:
-            report_lines.append(f"\n正常状态参考值: {normal_value}")
-
-        return "\n".join(report_lines)
+        self.single_prediction_finished.emit(status, data_dict, prob_dict)

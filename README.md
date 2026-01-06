@@ -10,7 +10,7 @@
 - Page1 数据导入：选择并记录数据集路径，主窗口持久化 `dataset_path`。
 - Page2 Apriori：运行规则挖掘与离散化对比，生成 4 张 Apriori 对比图。
 - Page3 贝叶斯网络：训练/构建 BN，保存 `(model, bin_config)`，输出 `bn_structure.png`。
-- Page4 预测评估：批量/单次预测，生成 `confusion_matrix.png` 与 `prediction_report.txt`。
+- Page4 预测评估：批量/单次预测；批量生成 `confusion_matrix.png` 与 `prediction_report.txt`，单次按结果生成 `health_assessment_single_report.txt` 或 `fault_diagnosis_single_report.txt`。
 - Page5 数据可视化：图表浏览。
 - Page6 报告：生成最新 `故障预测分析报告.docx`；一键导出图表、txt、Word 报告到指定目录，并刷新文件/元数据时间戳。
 
@@ -29,8 +29,12 @@
   - 输入：`dataset_path`  
   - 输出：模型与分箱配置 `new_bayesian/pkl/bn_bayesian_model.pkl`，图 `Bayesian_1130/result/bayesian_results/bn_structure.png`
 - Page4 预测评估  
-  - 输入：`bn_bayesian_model.pkl`（含 model+bin_config），评估数据  
-  - 输出（落地 `Bayesian_1130/result/bayesian_results/`）：`confusion_matrix.png`、`prediction_report.txt`
+  - 输入：  
+    - 批量：Page4 选择的测试数据集（不从 Page1 传入）  
+    - 单次：Page4 弹窗输入，健康评估基准数据来自 Page1 已选数据集  
+  - 输出（落地 `Bayesian_1130/result/bayesian_results/`）：  
+    - 批量：`confusion_matrix.png`、`prediction_report.txt`  
+    - 单次：`health_assessment_single_report.txt` 或 `fault_diagnosis_single_report.txt`
 - Page6 报告  
   - 输入：Page2/3/4 生成的图表与 `prediction_report.txt`  
   - 输出：`Bayesian_1130/故障预测分析报告.docx`；导出时复制上述全部资产到用户指定目录
@@ -46,7 +50,7 @@
 - `common/`：通用工具（路径、对话框、配置、日志等）；`get_bayesian_root()` 决定数据/结果根目录。
 - `Bayesian_1130/`：模型、结果与报告生成脚本
   - `result/apriori_results/`：4 张 Apriori 对比图
-  - `result/bayesian_results/`：`bn_structure.png`、`confusion_matrix.png`、`prediction_report.txt`
+  - `result/bayesian_results/`：`bn_structure.png`、`confusion_matrix.png`、`prediction_report.txt`、`health_assessment_single_report.txt`、`fault_diagnosis_single_report.txt`
   - `generate_report.py`：读取上述资产生成 `故障预测分析报告.docx`
 - `services/`：服务层（如 AprioriService）为页面提供数据/算法接口。
 - `resource/`：静态资源（图片、i18n、qss）。
@@ -63,7 +67,7 @@
 输入/输出示例：
 - Page2 输入：`dataset_path`；输出：4 张 Apriori 图（落地到 `result/apriori_results/`）
 - Page3 输入：`dataset_path`；输出：BN 模型 + `bn_structure.png`
-- Page4 输入：模型+bin_config；输出：`confusion_matrix.png`、`prediction_report.txt`
+- Page4 输入：批量测试集 + 单次弹窗输入；输出：`confusion_matrix.png`、`prediction_report.txt`，单次生成 `health_assessment_single_report.txt`/`fault_diagnosis_single_report.txt`
 - Page6 输入：以上全部资产；输出：`故障预测分析报告.docx`（在 `Bayesian_1130/`），并可一键导出到用户目录。
 
 ## 5) 运行流程（启动→结束）
@@ -75,7 +79,7 @@
 5. 关闭主窗体或退出 QApplication 结束进程。
 
 ## 6) 数据与控制流
-- 数据流：`dataset_path` → Apriori 结果图 → BN 模型/bin_config → 预测输出 (混淆矩阵 + txt) → Word 报告。
+- 数据流：`dataset_path` → Apriori 结果图 → BN 模型/bin_config → Page4 批量输出 (混淆矩阵 + prediction_report.txt) / 单次输出 (health_assessment_single_report.txt 或 fault_diagnosis_single_report.txt) → Word 报告。
 - 控制流：用户事件触发 View → Handler 编排 → Worker 在线程执行 → 信号回调更新 UI/状态。
 - 导出：Page6 Handler 校验资产齐全 → 复制图/txt/docx 到目标目录，刷新文件与 docx 核心属性时间戳。
 

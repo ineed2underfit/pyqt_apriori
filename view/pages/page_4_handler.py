@@ -73,6 +73,13 @@ class PageFourHandler(QObject):
             show_dialog(self._parent, f"模型文件不存在，请先在Page3中构建贝叶斯网络。\n路径: {model_path}", "错误")
             return
 
+        history_data_path = None
+        if isinstance(data_payload, dict):
+            history_data_path = getattr(main_window, "dataset_path", None)
+            if not history_data_path:
+                show_dialog(self._parent, "请先在 Page1 导入并配置数据集", "提示")
+                return
+
         # 禁用所有按钮
         self._parent.pushButton_import.setEnabled(False)
         self._parent.pushButton_assessment.setEnabled(False)
@@ -88,7 +95,7 @@ class PageFourHandler(QObject):
             show_dialog(self._parent, "正在进行批量预测...", "请稍候")
 
         self.thread = QThread()
-        self.worker = PredictionWorker(model_path, data_payload)
+        self.worker = PredictionWorker(model_path, data_payload, history_data_path=history_data_path)
         self.worker.moveToThread(self.thread)
 
         self.thread.started.connect(self.worker.run)
@@ -146,14 +153,13 @@ class PageFourHandler(QObject):
         feature_names = dataset_config.get('feature_names') or {}
         column_order = config_info.get('categorical_cols', []) + config_info.get('numerical_cols', [])
 
-        report_text, report_error, report_path = self._read_single_report_text()
-        parsed_report = self._parse_single_report(report_text) if report_text else {}
+        predicted_status = prediction_result or "未知"
+        normal_value = config_info.get('normal_value') or dataset_config.get('normal_value')
+        report_filename = "health_assessment_single_report.txt" if normal_value and predicted_status == normal_value \
+            else "fault_diagnosis_single_report.txt"
+        report_text, report_error, report_path = self._read_report_text(report_filename)
 
-        predicted_status = parsed_report.get('predicted_status') or prediction_result
-        key_parameters = parsed_report.get('key_parameters')
-        probability_items = parsed_report.get('probabilities')
-        if not probability_items and probability_dist:
-            probability_items = sorted(probability_dist.items(), key=lambda kv: kv[1], reverse=True)
+        probability_items = sorted(probability_dist.items(), key=lambda kv: kv[1], reverse=True) if probability_dist else []
 
         output = '<div style="font-size: 10pt; line-height: 1.6;">'
         output += '<p style="font-size: 11pt; font-weight: bold; color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 8px;">⚡ 单次故障概率评估结果</p>'
@@ -186,7 +192,7 @@ class PageFourHandler(QObject):
             output += '</tr>'
         output += '</table>'
 
-        if predicted_status == "正常运行":
+        if normal_value and predicted_status == normal_value:
             result_color = "#27ae60"
             result_bg_color = "#d5f4e6"
             result_border_color = "#2ecc71"
@@ -202,11 +208,6 @@ class PageFourHandler(QObject):
             f'background-color: {result_bg_color}; border-left: 5px solid {result_border_color}; border-radius: 5px;">'
             f'{result_icon} 预测故障类型：<span style="color: {result_color}; font-size: 13pt;">{predicted_status}</span></p>'
         )
-
-        if key_parameters:
-            output += '<div style="margin-top: 10px; padding: 10px; background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 5px;">'
-            output += f'<p style="margin: 0; color: #34495e;"><strong>重点关注参数：</strong>{key_parameters}</p>'
-            output += '</div>'
 
         if probability_items:
             output += '<div style="margin-top: 15px;">'
@@ -239,7 +240,7 @@ class PageFourHandler(QObject):
             output += f'<p style="color: #e74c3c;">⚠️ 读取 {os.path.basename(report_path)} 时出错: {self._escape_html(report_error)}</p>'
         elif report_text:
             output += '<div style="margin-top: 20px;">'
-            output += '<p style="font-size: 10.5pt; font-weight: bold; color: #2c3e50;">📄 模型原始报告</p>'
+            output += '<p style="font-size: 10.5pt; font-weight: bold; color: #2c3e50;">📄 评估报告</p>'
             output += '<pre style="white-space: pre-wrap; word-break: break-word; background: #f7f9fb; padding: 12px; border-radius: 6px; border: 1px solid #dfe6ef;">'
             output += self._escape_html(report_text)
             output += '</pre></div>'
@@ -272,8 +273,8 @@ class PageFourHandler(QObject):
             if hasattr(self._parent, 'progressBar'):
                 self._parent.progressBar.setVisible(False)
 
-    def _read_single_report_text(self):
-        report_path = os.path.join(RESULT_DIR, "single_prediction_report.txt")
+    def _read_report_text(self, report_filename: str):
+        report_path = os.path.join(RESULT_DIR, report_filename)
         if not os.path.exists(report_path):
             return None, None, report_path
         try:
