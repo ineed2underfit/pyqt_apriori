@@ -6,6 +6,7 @@ import pickle
 import pandas as pd
 import numpy as np
 import json
+import importlib.util
 from pgmpy.inference import VariableElimination
 import re
 
@@ -15,6 +16,21 @@ MODEL_PATH = os.path.join(PROJECT_ROOT, "Bayesian", "models", "final_bn_model.pk
 BINNING_CONFIG_PATH = os.path.join(PROJECT_ROOT, "Apriori", "分箱配置.json")
 # 假设规则文件路径
 RULES_CSV_PATH = os.path.join(PROJECT_ROOT, "result", "apriori_results", "关联规则分析结果.csv")
+
+_UTILS_MODULE = None
+
+
+def _load_utils_module():
+    global _UTILS_MODULE
+    if _UTILS_MODULE is None:
+        utils_path = os.path.join(PROJECT_ROOT, "Bayesian", "utils.py")
+        spec = importlib.util.spec_from_file_location("bayesian_utils", utils_path)
+        if spec is None or spec.loader is None:
+            raise ImportError(f"无法加载 utils 模块: {utils_path}")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        _UTILS_MODULE = module
+    return _UTILS_MODULE
 
 def load_model_and_config():
     """加载模型和配置文件"""
@@ -31,10 +47,8 @@ def load_model_and_config():
     # 尝试加载规则（用于反推）
     rules_df = None
     try:
-        rules_df = pd.read_csv(RULES_CSV_PATH, header=None, names=["rules", "support", "confidence", "lift"], encoding='utf-8')
-        for col in ['support', 'confidence', 'lift']:
-            rules_df[col] = pd.to_numeric(rules_df[col], errors='coerce')
-        rules_df = rules_df.dropna()
+        utils_module = _load_utils_module()
+        rules_df = utils_module.load_association_rules(RULES_CSV_PATH)
         print(f"✅ 关联规则加载成功，有效规则数: {len(rules_df)}")
     except FileNotFoundError:
         print(f"⚠️ 警告: 未找到关联规则文件 {RULES_CSV_PATH}，将无法进行基于规则的反推。")

@@ -52,6 +52,7 @@ class PageTwoHandler(QObject):
             self.thread = QThread()
             params = {
                 'min_support': self._parent.doubleSpinBox_support.value(),
+                'min_new_support': self._parent.doubleSpinBox_new.value(),
                 'min_confidence': self._parent.doubleSpinBox_confidence.value(),
                 'min_lift': self._parent.doubleSpinBox_lift.value(),
                 'num_bins': int(self._parent.doubleSpinBox_binning.value()),
@@ -149,7 +150,12 @@ class PageTwoHandler(QObject):
         html += '<thead style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: #2c3e50;">'
         html += '<tr>'
         for col in rules_df.columns:
-            html += f'<th style="padding: 10px 8px; text-align: left; font-weight: bold; font-size: 9pt;">{col}</th>'
+            display_col = col
+            if col == '完整支持度':
+                display_col = '最小整体支持度'
+            elif col == '故障类型支持度':
+                display_col = '最小支持度'
+            html += f'<th style="padding: 10px 8px; text-align: left; font-weight: bold; font-size: 9pt;">{display_col}</th>'
         html += '</tr>'
         html += '</thead><tbody>'
 
@@ -160,7 +166,7 @@ class PageTwoHandler(QObject):
                 value = row[col]
                 if col == '规则':
                     html += f'<td style="padding: 10px 8px; font-family: monospace; font-size: 9pt; color: #2c3e50; background-color: #ecf0f1; border-left: 4px solid #3498db;">{value}</td>'
-                elif col in ['支持度', '置信度', '提升度']:
+                elif col in ['支持度', '完整支持度', '故障类型支持度', '置信度', '提升度']:
                     if isinstance(value, (int, float)):
                         html += f'<td style="padding: 10px 8px; text-align: right; font-weight: bold; color: #34495e;">{value:.3f}</td>'
                     else:
@@ -174,6 +180,8 @@ class PageTwoHandler(QObject):
             html += '<div style="margin-top: 15px; padding: 12px; background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); border-radius: 6px;">'
             if '支持度' in rules_df.columns:
                 html += f'<p style="margin: 5px 0; color: #34495e;"><strong>平均支持度</strong> {preview_df["支持度"].mean():.3f}</p>'
+            elif '完整支持度' in rules_df.columns:
+                html += f'<p style="margin: 5px 0; color: #34495e;"><strong>平均支持度</strong> {preview_df["完整支持度"].mean():.3f}</p>'
             if '置信度' in rules_df.columns:
                 html += f'<p style="margin: 5px 0; color: #34495e;"><strong>平均置信度</strong> {preview_df["置信度"].mean():.3f}</p>'
             if '提升度' in rules_df.columns:

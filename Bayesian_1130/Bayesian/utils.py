@@ -16,14 +16,35 @@ def load_binning_config(path):
 
 
 def load_association_rules(path):
-    """读取关联规则 CSV（无 header），确保数值列为数值类型"""
-    df = pd.read_csv(path, header=None, names=["rules", "support", "confidence", "lift"], encoding='utf-8')
+    """读取关联规则 CSV，兼容新旧表头与无表头格式"""
+    df = pd.read_csv(path, encoding='utf-8-sig')
+    columns = list(df.columns)
 
-    # 确保数值列被转换为float
+    if '规则' in columns:
+        support_col = '完整支持度' if '完整支持度' in columns else '支持度'
+        required_cols = ['规则', support_col, '置信度', '提升度']
+        missing = [col for col in required_cols if col not in columns]
+        if missing:
+            raise ValueError(f"关联规则 CSV 缺少必要列: {missing}")
+        df = df[required_cols].rename(
+            columns={
+                '规则': 'rules',
+                support_col: 'support',
+                '置信度': 'confidence',
+                '提升度': 'lift'
+            }
+        )
+    elif {'rules', 'support', 'confidence', 'lift'}.issubset(columns):
+        df = df[['rules', 'support', 'confidence', 'lift']].copy()
+    else:
+        df = pd.read_csv(path, header=None, encoding='utf-8-sig')
+        if df.shape[1] < 4:
+            raise ValueError(f"关联规则 CSV 列数不足: {df.shape[1]}")
+        df = df.iloc[:, :4]
+        df.columns = ['rules', 'support', 'confidence', 'lift']
+
     for col in ['support', 'confidence', 'lift']:
         df[col] = pd.to_numeric(df[col], errors='coerce')
-
-    # 删除包含NaN的行
     df = df.dropna()
     print(f"✅ 关联规则加载完成，有效规则数: {len(df)}")
     return df

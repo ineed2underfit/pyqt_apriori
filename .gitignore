@@ -82,13 +82,13 @@ Bayesian_1130/result/apriori_results/*
 !Bayesian_1130/result/apriori_results/
 
 Bayesian_1130_revised/result/apriori_results/*
-!Bayesian_1130_revised/result/apriori_results/
+!Bayesian_1130_revised/result/apriori_results/.gitkeep
 
 Bayesian_1130/result/bayesian_results/*
-!Bayesian_1130/result/bayesian_results/
+!Bayesian_1130/result/bayesian_results/.gitkeep
 
 Bayesian_1130_revised/result/bayesian_results/*
-!Bayesian_1130_revised/result/bayesian_results/
+!Bayesian_1130_revised/result/bayesian_results/.gitkeep
 
 Bayesian_1130/datas/apriori_results/*
 !Bayesian_1130/datas/apriori_results/
@@ -105,3 +105,6 @@ Bayesian_1130_revised/Bayesian/models/*
 apriori/apriori_results/*
 !apriori/apriori_results/
 
+*.pkl
+dist/
+*.docx

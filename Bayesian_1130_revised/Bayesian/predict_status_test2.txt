@@ -1,0 +1,973 @@
+# Bayesian/predict_status.py
+
+import os
+import sys
+import pickle
+import pandas as pd
+import numpy as np
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+import matplotlib.pyplot as plt
+import seaborn as sns
+import json
+from datetime import datetime
+from mlxtend.preprocessing import TransactionEncoder
+from mlxtend.frequent_patterns import apriori, association_rules
+from scipy.spatial.distance import jensenshannon
+import warnings
+
+warnings.filterwarnings('ignore')
+
+# --- 配置路径 ---
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+MODEL_PATH = os.path.join(PROJECT_ROOT, "Bayesian", "models", "final_bn_model.pkl")  # 请替换为您实际的pkl文件名
+DATA_PATH = os.path.join(PROJECT_ROOT, "datas", "device_HP30_data.csv")
+BINNING_CONFIG_PATH = os.path.join(PROJECT_ROOT, "Apriori", "分箱配置.json")
+RULES_PATH = os.path.join(PROJECT_ROOT, "result", "bayesian_results", "network_rules_with_mapping.json")
+RESULT_DIR = os.path.join(PROJECT_ROOT, "result", "bayesian_results")
+EVALUATION_RESULT_DIR = os.path.join(RESULT_DIR, "evaluation")  # 新增评价结果目录
+os.makedirs(RESULT_DIR, exist_ok=True)
+os.makedirs(EVALUATION_RESULT_DIR, exist_ok=True)  # 确保评价结果目录存在
+
+
+# --- 原有的 predict_status.py 函数 ---
+
+def load_binning_config(path):
+    """读取分箱配置文件，返回完整配置字典"""
+    with open(path, 'r', encoding='utf-8') as f:
+        return json.load(f)
+
+
+def load_network_rules(path):
+    """读取网络规则文件，返回规则列表"""
+    with open(path, 'r', encoding='utf-8') as f:
+        return json.load(f)
+
+
+def get_key_parameters_for_status(predicted_status, network_rules):
+    """根据预测状态，从规则中提取需要关注的参数
+    Args:
+        predicted_status: 预测的状态
+        network_rules: 网络规则列表
+    Returns:
+        list: 需要关注的参数列表（去重后）
+    """
+    key_parameters = set()
+    # 遍历所有规则，找到consequent匹配的规则
+    for rule in network_rules:
+        if rule.get("consequent") == predicted_status:
+            # 提取该规则的所有前置条件的original_column
+            for antecedent in rule.get("antecedents_mapped", []):
+                original_col = antecedent.get("original_column")
+                if original_col:
+                    key_parameters.add(original_col)
+    return sorted(list(key_parameters))
+
+
+def discretize_raw_data_for_prediction(raw_data, binning_config):
+    """对原始数据进行离散化，使其格式与训练时一致
+    这个函数的逻辑必须与 build_model.py 中的 discretize_raw_data 完全相同
+    """
+    df_discrete = pd.DataFrame(index=raw_data.index)
+
+    # 1. 处理数值特征：离散化为 discrete labels
+    dataset_config = binning_config["metadata"]["dataset_config"]
+    numerical_cols = dataset_config["numerical_cols"]
+    binning_info = binning_config["data_info"]["binning_info"]
+
+    for col in numerical_cols:
+        try:
+            if col in raw_data.columns:
+                # 使用分箱信息进行离散化
+                bins_info = binning_info[col]
+                boundaries = bins_info['bins']
+                labels = bins_info['labels']
+                # pd.cut 返回离散标签
+                discrete_values = pd.cut(raw_data[col], bins=boundaries, labels=labels, include_lowest=True)
+                # 将离散标签直接赋值给新列，使用与模型节点匹配的名称
+                # 通常模型节点名就是 'feature_discrete'
+                df_discrete[f'{col}_discrete'] = discrete_values
+                print(f"  ✅ 离散化列 '{col}' -> '{col}_discrete'")
+            else:
+                print(f"⚠️ 警告: 数值列 '{col}' 在原始数据中未找到，跳过离散化。")
+        except Exception as e:
+            print(f"⚠️ 警告: 离散化列 '{col}' 时出错: {e}")
+            # 尝试填充 NaN，但更安全的做法是中断或警告
+            df_discrete[f'{col}_discrete'] = np.nan
+            continue
+
+    # 2. 处理类别特征：one-hot 编码
+    categorical_info = binning_config["data_info"]["categorical_info"]
+    categorical_cols = dataset_config["categorical_cols"]
+
+    for col in categorical_cols:
+        if col in raw_data.columns and col in categorical_info:
+            try:
+                info = categorical_info[col]
+                unique_values = info["unique_values"]
+                prefix = info.get("prefix", col)
+                # 为每个唯一值创建二值列
+                for value in unique_values:
+                    new_col_name = f"{prefix}_{value}"
+                    df_discrete[new_col_name] = (raw_data[col] == value).astype(int)
+                    print(f"  ✅ One-hot 编码列 '{col}'='{value}' -> '{new_col_name}'")
+            except Exception as e:
+                print(f"⚠️ 警告: one-hot编码列 '{col}' 时出错: {e}")
+                continue
+
+    # 3. 保留目标变量
+    target_col = dataset_config["target_col"]
+    if target_col in raw_data.columns:
+        df_discrete[target_col] = raw_data[target_col]
+        print(f"  ✅ 保留目标列 '{target_col}'")
+
+    return df_discrete
+
+
+def predict_with_model(model, test_data, target_col="status", normal_value=None,
+                       dataset_config=None):  # Add dataset_config as parameter
+    """使用模型进行预测
+    Args:
+        model: 贝叶斯网络模型
+        test_ 测试数据（已离散化）
+        target_col: 目标变量列名
+        normal_value: 正常状态的值，如果为None则从配置文件中读取
+        dataset_config: 数据集配置，包含 categorical_cols 信息
+    """
+    from pgmpy.inference import VariableElimination
+
+    # 如果没有提供normal_value，尝试从配置文件中读取
+    if normal_value is None:
+        try:
+            binning_config = load_binning_config(BINNING_CONFIG_PATH)
+            normal_value = binning_config.get("metadata", {}).get("dataset_config", {}).get("normal_value")
+            if normal_value is None:
+                normal_value = binning_config.get("data_info", {}).get("target_info", {}).get("normal_value")
+        except Exception as e:
+            print(f"⚠️ 警告: 无法从配置文件读取正常值: {e}，使用默认值'正常运行'")
+            normal_value = "正常运行"
+    if normal_value is None:
+        normal_value = "正常运行"  # 最后的默认值
+
+    # 初始化推理器
+    infer = VariableElimination(model)
+    predictions = []
+    prediction_probs = []
+
+    print(f"🔮 开始预测，样本数: {len(test_data)}")
+    # 为每一行数据进行预测
+    for idx, row in test_data.iterrows():
+        # 准备证据（除了目标变量）
+        evidence = {}
+        for col in test_data.columns:
+            if col != target_col:
+                val = row[col]
+                # 检查值是否有效 (非 NaN, 非 None)
+                if pd.notna(val) and val is not None:
+                    # --- 修正逻辑 ---
+                    # 检查列名是否在模型节点中 (用于 one-hot 编码特征)
+                    if col in model.nodes():
+                        # 对于one-hot编码的二元节点，只有值为1的才应作为证据
+                        if isinstance(val, (int, float)) and val == 1:
+                            evidence[col] = int(val)
+                        # 如果值为0，通常不添加到证据中（因为默认可能是0）
+                    # 如果列名不在模型节点中，检查其值是否是模型节点 (用于离散化特征)
+                    elif val in model.nodes():
+                        # 对于离散化特征，将该值作为节点名添加到证据中
+                        # 通常离散化后的值本身就是模型中的一个节点，其值为1
+                        # 但pgmpy的query通常需要指定节点的值，所以这里我们传递值1
+                        # 然而，对于离散变量，我们通常直接传递 'node_name': 'discrete_value'
+                        # 但在这种特定模型结构下，可能 'discrete_value' 本身就是一个布尔节点
+                        # 让我们尝试将 'discrete_value' 作为节点名，值为1
+                        evidence[val] = 1  # Assuming 'val' (the label) is the node name
+                    else:
+                        print(f"  ⚠️  列 '{col}' (值: {val}) 既不是模型节点，其值也不是模型节点，跳过作为证据。")
+
+        print(f"  - 模型节点: {sorted(list(model.nodes()))}")
+        print(f"  - 行 {idx} 的有效证据: {evidence}")
+
+        if not evidence:
+            print(f"  - 警告: 第 {idx} 行没有可用的证据变量")
+            # 如果预测失败，返回最常见的状态或默认状态
+            predictions.append(normal_value)  # 使用从配置读取的正常值
+            prediction_probs.append({})
+            continue
+
+        try:
+            # 查询目标变量的概率分布
+            result = infer.query(variables=[target_col], evidence=evidence)
+            # 获取最可能的状态
+            most_likely_state_idx = np.argmax(result.values)
+            most_likely_state = result.state_names[target_col][most_likely_state_idx]
+            predictions.append(most_likely_state)
+
+            # 获取所有状态的概率
+            state_probs = {state: prob for state, prob in zip(result.state_names[target_col], result.values)}
+            prediction_probs.append(state_probs)
+
+            if idx % 100 == 0:  # 每100个样本打印一次进度
+                print(f"  - 处理进度: {idx + 1}/{len(test_data)}")
+
+        except Exception as e:
+            print(f"⚠️ 预测第 {idx} 行时出错: {e}")
+            print(f"  - 证据: {evidence}")
+            # 如果预测失败，返回最常见的状态或默认状态
+            predictions.append(normal_value)  # 使用从配置读取的正常值
+            prediction_probs.append({})  # 空概率字典
+
+    print(f"✅ 预测完成，成功预测 {len(predictions)} 个样本")
+    return predictions, prediction_probs
+
+
+def save_prediction_report(y_true, y_pred, prediction_probs, model_path, report_save_path):
+    """生成并保存预测报告"""
+    # 计算准确度
+    accuracy = accuracy_score(y_true, y_pred)
+    # 获取所有唯一的真实和预测状态
+    all_states = sorted(list(set(y_true + y_pred)))
+    # 生成分类报告
+    class_report = classification_report(y_true, y_pred, labels=all_states, output_dict=True, zero_division=0.0)
+
+    # 生成报告文本
+    report_text = f"""质量评价模型分析报告
+===========================
+生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+模型路径: {model_path}
+测试样本数: {len(y_true)}
+使用状态: {all_states}
+总体准确度: {accuracy:.4f}
+
+详细分类报告:
+"""
+    report_text += classification_report(y_true, y_pred, labels=all_states, zero_division=0.0)
+
+    report_text += f"""
+类别详细统计:
+"""
+    for state in all_states:
+        if state in class_report:
+            report_text += f" {state}:"
+            report_text += f" 支持样本数 (Support): {class_report[state].get('support', 0)}"
+            report_text += f" 精确率 (Precision): {class_report[state].get('precision', 0):.4f}"
+            report_text += f" 召回率 (Recall): {class_report[state].get('recall', 0):.4f}"
+            report_text += f" F1分数 (F1-Score): {class_report[state].get('f1-score', 0):.4f}"
+            report_text += "\n"
+
+    with open(report_save_path, 'w', encoding='utf-8') as f:
+        f.write(report_text)
+    print(f"✅ 质量评价模型分析报告已保存至: {report_save_path}")
+
+
+def save_confusion_matrix(y_true, y_pred, target_states, cm_save_path):
+    """生成并保存混淆矩阵"""
+    # 确保所有类别都在混淆矩阵中，即使某些类别没有被预测到或真实出现
+    cm = confusion_matrix(y_true, y_pred, labels=target_states)
+
+    plt.figure(figsize=(10, 8))
+    # 设置中文字体
+    plt.rcParams['font.sans-serif'] = ['SimHei', 'DejaVu Sans', 'Arial Unicode MS', 'Microsoft YaHei']
+    plt.rcParams['axes.unicode_minus'] = False
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
+                xticklabels=target_states, yticklabels=target_states,
+                cbar_kws={'label': '样本数量'})
+    plt.title('混淆矩阵')
+    plt.xlabel('预测状态')
+    plt.ylabel('真实状态')
+    plt.xticks(rotation=45, ha="right")
+    plt.yticks(rotation=0)
+    plt.tight_layout()
+    plt.savefig(cm_save_path, dpi=300, bbox_inches='tight')
+    plt.close()
+    print(f"📊 混淆矩阵已保存至: {cm_save_path}")
+
+
+def save_prediction_results(y_true, y_pred, prediction_probs, results_save_path):
+    """保存预测结果"""
+    results_df = pd.DataFrame({
+        '真实状态': y_true,
+        '预测状态': y_pred
+    })
+
+    # 如果有概率信息，也保存
+    if prediction_probs and len(prediction_probs) > 0 and prediction_probs[0]:
+        # 提取最高概率状态及其概率
+        most_likely_states = []
+        max_probs = []
+        for prob_dict in prediction_probs:
+            if prob_dict:
+                most_likely_state = max(prob_dict, key=prob_dict.get)
+                max_prob = prob_dict[most_likely_state]
+                most_likely_states.append(most_likely_state)
+                max_probs.append(max_prob)
+            else:
+                most_likely_states.append('N/A')
+                max_probs.append(0.0)
+
+        results_df['最高概率状态'] = most_likely_states
+        results_df['最高概率'] = max_probs
+
+    results_df.to_csv(results_save_path, index=False, encoding='utf-8')
+    print(f"📋 预测结果已保存至: {results_save_path}")
+
+
+# --- 评价层相关函数 (现在需要接收必要的上下文作为参数) ---
+
+def load_normal_dataset_and_config_for_evaluation(data_path, config_path, normal_value):
+    """加载原始数据集，应用分箱，并筛选出'正常'状态的样本用于评价计算。"""
+    print("🔍 加载原始数据集和配置用于评价...")
+    try:
+        df = pd.read_csv(data_path)
+    except FileNotFoundError:
+        raise FileNotFoundError(f"Data file '{data_path}' not found.")
+
+    try:
+        with open(config_path, 'r', encoding='utf-8') as f:
+            config = json.load(f)
+    except FileNotFoundError:
+        raise FileNotFoundError(f"Configuration file '{config_path}' not found.")
+    except json.JSONDecodeError:
+        raise ValueError(f"Configuration file '{config_path}' is not a valid JSON.")
+
+    # 识别用于分箱的特征列
+    binning_info = config.get('data_info', {}).get('binning_info', {})
+    feature_columns_to_discretize = list(binning_info.keys())
+    print(f"📋 Features to discretize for evaluation: {feature_columns_to_discretize}")
+
+    # 应用分箱
+    print("📊 Applying discretization to raw dataset...")
+    for col in feature_columns_to_discretize:
+        if col in df.columns and col in binning_info:
+            bins_info = binning_info[col]
+            boundaries = bins_info['bins']
+            labels = bins_info['labels']
+            df[f'{col}_discrete'] = pd.cut(df[col], bins=boundaries, labels=labels, include_lowest=True)
+        else:
+            print(f"⚠️  Warning: Column '{col}' not found in data or config for evaluation. Skipping.")
+
+    # 筛选正常样本 (使用传入的 normal_value)
+    df_normal = df[df['status'] == normal_value].copy()
+    print(f"📋 Total records in raw dataset: {len(df)}, Normal records for evaluation: {len(df_normal)}")
+
+    if len(df_normal) == 0:
+        raise ValueError(
+            f"No data found with status '{normal_value}' in the raw dataset for evaluation. Cannot proceed.")
+
+    # 返回带有 _discrete 后缀的特征名列表，以匹配离散化后的列名
+    discrete_features = [f'{col}_discrete' for col in feature_columns_to_discretize]
+    return df_normal, discrete_features, config
+
+
+def calculate_FMI(df_sample, mu_N, discrete_features, df_normal):
+    """Calculates Feature Matching Index (FMI)."""
+    sample_dist = {}
+    for feat in discrete_features:
+        sample_val = df_sample[feat]
+        possible_labels = list(mu_N[feat].keys())
+        sample_dist[feat] = {label: 1.0 if label == sample_val else 0.0 for label in possible_labels}
+
+    js_distance_sum = 0
+    for feat in discrete_features:
+        p_mu = list(mu_N[feat].values())
+        q_sample = list(sample_dist[feat].values())
+        p_mu = np.array(p_mu) / sum(p_mu)
+        q_sample = np.array(q_sample) / sum(q_sample)
+        js_distance_sum += jensenshannon(p_mu, q_sample) ** 2
+
+    # Calculate max JS distance in DN for normalization
+    max_js_distances_in_DN = []
+    for _, row_dn in df_normal.iterrows():
+        row_dn_dist = {}
+        for feat in discrete_features:
+            val_dn = row_dn[feat]
+            possible_labels_dn = list(mu_N[feat].keys())
+            row_dn_dist[feat] = {label: 1.0 if label == val_dn else 0.0 for label in possible_labels_dn}
+
+        dn_js_distance_sum = 0
+        for feat in discrete_features:
+            p_mu_dn = list(mu_N[feat].values())
+            p_mu_dn = np.array(p_mu_dn) / sum(p_mu_dn)
+            q_dn = list(row_dn_dist[feat].values())
+            q_dn = np.array(q_dn) / sum(q_dn)
+            dn_js_distance_sum += jensenshannon(p_mu_dn, q_dn) ** 2
+        avg_dn_js_distance = dn_js_distance_sum / len(discrete_features) if discrete_features else 0
+        max_js_distances_in_DN.append(avg_dn_js_distance)
+
+    max_js_distance_DN = max(max_js_distances_in_DN) if max_js_distances_in_DN else 0
+
+    if max_js_distance_DN == 0:
+        return 1.0
+    else:
+        avg_js_distance = js_distance_sum / len(discrete_features) if discrete_features else 0
+        clipped_distance = min(avg_js_distance, max_js_distance_DN)
+        return 1 - (clipped_distance / max_js_distance_DN)
+
+
+def calculate_RI(df_sample, model, discrete_features, num_perturbations=10, normal_value=None):
+    """Calculates Robustness Index (RI) using the loaded BN model."""
+    from pgmpy.inference import VariableElimination
+    infer = VariableElimination(model)
+
+    # Get normal_value from config if not provided
+    if normal_value is None:
+        try:
+            with open(BINNING_CONFIG_PATH, 'r', encoding='utf-8') as f:
+                config_temp = json.load(f)
+            normal_value = config_temp.get("metadata", {}).get("dataset_config", {}).get("normal_value")
+            if normal_value is None:
+                normal_value = config_temp.get("data_info", {}).get("target_info", {}).get("normal_value")
+        except Exception:
+            normal_value = "正常"  # fallback default
+
+    # Get model nodes to verify which values are valid
+    model_nodes = set(model.nodes())
+
+    # Define adjacent bins mapping based on config labels
+    adjacent_bins = {}
+    # Load config to get labels
+    with open(BINNING_CONFIG_PATH, 'r', encoding='utf-8') as f:
+        config_for_labels = json.load(f)
+    binning_info = config_for_labels.get('data_info', {}).get('binning_info', {})
+    for col, info in binning_info.items():
+        labels = info['labels']
+        adjacent_bins[f'{col}_discrete'] = {}
+        for i, label in enumerate(labels):
+            adjacent_vals = []
+            if i > 0:
+                adjacent_vals.append(labels[i - 1])
+            if i < len(labels) - 1:
+                adjacent_vals.append(labels[i + 1])
+            adjacent_bins[f'{col}_discrete'][label] = adjacent_vals
+
+    prob_normal_sum = 0.0
+
+    for _ in range(num_perturbations):
+        # Build evidence dict: for discrete features, node names are the label values themselves
+        # Convert from {column_name: label_value} to {label_value: 1} format
+        evidence = {}
+        for feat in discrete_features:
+            label_value = df_sample[feat]
+            # Check if the label value is a node in the model
+            if pd.notna(label_value) and label_value in model_nodes:
+                evidence[label_value] = 1
+        
+        # Perturb one random feature
+        feature_to_perturb = np.random.choice(discrete_features)
+        current_value = df_sample[feature_to_perturb]
+        possible_adjacent_values = adjacent_bins.get(feature_to_perturb, {}).get(current_value, [])
+
+        if possible_adjacent_values:
+            new_value = np.random.choice(possible_adjacent_values)
+            # Remove old value from evidence if it exists
+            if current_value in evidence:
+                del evidence[current_value]
+            # Add new value if it's a valid node
+            if new_value in model_nodes:
+                evidence[new_value] = 1
+
+        try:
+            result = infer.query(variables=['status'], evidence=evidence)
+            # Use normal_value instead of hardcoded '正常'
+            if normal_value in result.state_names['status']:
+                prob_normal_perturbed = result.values[result.state_names['status'].index(normal_value)]
+            else:
+                prob_normal_perturbed = 0.0
+            prob_normal_sum += prob_normal_perturbed
+        except Exception as e:
+            # Only print warning if it's not about empty evidence (which is expected sometimes)
+            if "evidence" not in str(e).lower() or "empty" not in str(e).lower():
+                print(f"  ⚠️  Error during BN inference for RI (perturbation): {e}. Using 0.0 for this perturbation.")
+            prob_normal_sum += 0.0
+
+    avg_prob_normal_perturbed = prob_normal_sum / num_perturbations
+    return avg_prob_normal_perturbed
+
+
+def calculate_RSI(df_sample, RG, discrete_features):
+    """Calculates Rule Satisfaction Index (RSI)."""
+    total_weight = RG['weight'].sum() if not RG.empty else 0
+    if total_weight == 0:
+        return 0.0
+
+    satisfied_weight = 0
+    sample_features_set = set()
+    for feat in discrete_features:
+        sample_features_set.add(f"{feat}_{df_sample[feat]}")
+
+    for _, rule in RG.iterrows():
+        antecedent = set(rule['antecedents'])
+        consequent = set(rule['consequents'])
+
+        if antecedent.issubset(sample_features_set):
+            if consequent.issubset(sample_features_set):
+                satisfied_weight += rule['weight']
+
+    return satisfied_weight / total_weight
+
+
+def mine_quality_rules(df_normal, discrete_features, min_support=0.1, min_confidence=0.6):
+    """Mines association rules from the normal dataset for RSI."""
+    print("🔍 Mining association rules for RSI...")
+    print(f"  📊 正常数据集大小: {len(df_normal)} 条记录")
+    print(f"  📋 离散特征数量: {len(discrete_features)}")
+    
+    if not discrete_features:
+        print("  ⚠️  No discrete features provided for rule mining. Returning empty rules.")
+        return pd.DataFrame()
+
+    # 检查列是否存在
+    missing_cols = [feat for feat in discrete_features if feat not in df_normal.columns]
+    if missing_cols:
+        print(f"  ⚠️  警告: 以下特征列在数据中不存在: {missing_cols}")
+        discrete_features = [feat for feat in discrete_features if feat in df_normal.columns]
+
+    transactions = []
+    for _, row in df_normal.iterrows():
+        transaction = [f"{feat}_{row[feat]}" for feat in discrete_features if pd.notna(row[feat])]
+        if transaction:  # 只添加非空交易
+            transactions.append(transaction)
+
+    print(f"  📦 生成的交易数量: {len(transactions)}")
+    
+    if not transactions:
+        print("  ⚠️  No transactions generated for rule mining (empty discrete features or data).")
+        return pd.DataFrame()
+
+    try:
+        te = TransactionEncoder()
+        te_ary = te.fit(transactions).transform(transactions)
+        df_encoded = pd.DataFrame(te_ary, columns=te.columns_)
+        print(f"  🔢 编码后的特征数量: {len(te.columns_)}")
+
+        # 尝试逐步降低支持度阈值
+        support_thresholds = [min_support, min_support * 0.5, 0.05, 0.03]
+        frequent_itemsets = pd.DataFrame()
+        
+        for support_thresh in support_thresholds:
+            frequent_itemsets = apriori(df_encoded, min_support=support_thresh, use_colnames=True)
+            if not frequent_itemsets.empty:
+                print(f"  ✅ 使用支持度阈值 {support_thresh} 找到了 {len(frequent_itemsets)} 个频繁项集")
+                break
+        
+        if frequent_itemsets.empty:
+            print(f"  ⚠️  No frequent itemsets found even with lowered support threshold (最低尝试 {support_thresholds[-1]}).")
+            return pd.DataFrame()
+
+        rules_all = association_rules(frequent_itemsets, metric="confidence", min_threshold=min_confidence)
+        print(f"  📜 生成 {len(rules_all)} 条关联规则 (置信度 >= {min_confidence})")
+
+        if rules_all.empty:
+            print(f"  ⚠️  没有满足最小置信度 {min_confidence} 的规则，尝试降低置信度...")
+            # 尝试降低置信度
+            for conf_thresh in [0.5, 0.4, 0.3]:
+                rules_all = association_rules(frequent_itemsets, metric="confidence", min_threshold=conf_thresh)
+                if not rules_all.empty:
+                    print(f"  ✅ 使用置信度阈值 {conf_thresh} 找到了 {len(rules_all)} 条规则")
+                    min_confidence = conf_thresh
+                    break
+
+        if rules_all.empty:
+            print(f"  ⚠️  即使降低置信度也未能找到规则")
+            return pd.DataFrame()
+
+        # 优先使用严格的过滤条件，如果没有规则则放宽
+        RG = rules_all[(rules_all['confidence'] > 0.7) & (rules_all['lift'] > 1.2)].copy()
+        
+        if RG.empty:
+            print(f"  ⚠️  严格过滤后无规则 (confidence>0.7, lift>1.2)，尝试放宽条件...")
+            # 放宽条件：confidence > 0.5, lift > 1.0
+            RG = rules_all[(rules_all['confidence'] > 0.5) & (rules_all['lift'] > 1.0)].copy()
+            if not RG.empty:
+                print(f"  ✅ 放宽条件后找到 {len(RG)} 条规则 (confidence>0.5, lift>1.0)")
+        
+        if RG.empty:
+            # 如果还是空的，至少使用 lift > 1 的规则
+            RG = rules_all[rules_all['lift'] > 1.0].copy()
+            if not RG.empty:
+                print(f"  ✅ 使用 lift>1.0 的规则，找到 {len(RG)} 条")
+
+        if RG.empty:
+            print(f"  ⚠️  最终未能找到符合条件的规则")
+            return pd.DataFrame()
+
+        print(f"  ✅ 最终挖掘到 {len(RG)} 条质量规则")
+
+        # Calculate weights (w_i = conf * lift)
+        RG['weight'] = RG['confidence'] * RG['lift']
+        return RG
+        
+    except Exception as e:
+        print(f"  ❌ 规则挖掘过程中出错: {e}")
+        import traceback
+        traceback.print_exc()
+        return pd.DataFrame()
+
+
+def perform_evaluation(user_inputs_discrete, model, df_normal, discrete_features, normal_value, target_col, config=None):
+    """Performs the full evaluation (FMI, RI, RSI, S_score, grading) for a single sample."""
+    print("\n--- 开始精细化评价 ---")
+
+    # Load config if not provided
+    if config is None:
+        try:
+            config = load_binning_config(BINNING_CONFIG_PATH)
+        except Exception as e:
+            print(f"⚠️ 警告: 无法加载配置文件: {e}")
+            raise ValueError("需要配置文件来计算FMI，请确保配置已加载或路径正确")
+
+    # Load mu_N (distribution of features in normal data from the loaded dataset)
+    print("📈 Calculating expected pattern (mu_N) for FMI...")
+    mu_N = {}
+    for feat in discrete_features:
+        # discrete_features now contains names with '_discrete' suffix (e.g., '液压压力_discrete')
+        # Remove '_discrete' suffix to get original feature name for config lookup
+        original_feat = feat.replace('_discrete', '')
+        if original_feat in config.get('data_info', {}).get('binning_info', {}):
+            config_labels = config['data_info']['binning_info'][original_feat]['labels']
+            # Use feat (with _discrete suffix) to access the column in df_normal
+            mu_N[feat] = df_normal[feat].value_counts(normalize=True).reindex(config_labels, fill_value=0.0).to_dict()
+        else:
+            # Fallback: use the values present in df_normal
+            mu_N[feat] = df_normal[feat].value_counts(normalize=True).to_dict()
+
+    # Mine rules for RSI (using the loaded normal dataset)
+    RG = mine_quality_rules(df_normal, discrete_features)
+
+    # Create a single-row DataFrame for the user input sample
+    sample_df = pd.DataFrame([user_inputs_discrete])
+
+    # Calculate indices for the single sample
+    print("📊 Calculating individual indices for the sample...")
+    # CI is passed as an argument (from BN prediction)
+    CI = user_inputs_discrete.get('CI_from_bn', 0.0)  # Assume CI is passed in the dict
+    FMI = calculate_FMI(sample_df.iloc[0], mu_N, discrete_features, df_normal)
+    RI = calculate_RI(sample_df.iloc[0], model, discrete_features, normal_value=normal_value)
+    RSI = calculate_RSI(sample_df.iloc[0], RG, discrete_features)
+
+    print(f"  - CI (Quality Confidence): {CI:.4f}")
+    print(f"  - FMI (Feature Matching): {FMI:.4f}")
+    print(f"  - RI (Robustness): {RI:.4f}")
+    print(f"  - RSI (Rule Satisfaction): {RSI:.4f}")
+
+    # Define weights for the composite score (example weights)
+    alpha_ci = 1
+    alpha_fmi = 1
+    alpha_ri = 1
+    alpha_rsi = 1
+
+    # Calculate composite score S(x) and normalize to [0, 1] range
+    total_weight = alpha_ci + alpha_fmi + alpha_ri + alpha_rsi
+    S_score = (
+            alpha_ci * CI +
+            alpha_fmi * FMI +
+            alpha_ri * RI +
+            alpha_rsi * RSI
+    ) / total_weight  # Normalize to [0, 1] range
+    print(f"  - Composite Score (S): {S_score:.4f} (normalized)")
+
+    # Apply dynamic grading standards (Percentile Method, using the loaded DN)
+    print("🏆 Applying dynamic grading standards (Percentile Method from normal dataset)...")
+    q90 = df_normal['S_score_cached'].quantile(0.90) if 'S_score_cached' in df_normal.columns else 0.9
+    q75 = df_normal['S_score_cached'].quantile(0.75) if 'S_score_cached' in df_normal.columns else 0.75
+    q50 = df_normal['S_score_cached'].quantile(0.50) if 'S_score_cached' in df_normal.columns else 0.5
+
+    def assign_grade(score, q90, q75, q50):
+        if score >= q90:
+            return '卓越(A+)'
+        elif score >= q75:
+            return '优秀(A)'
+        elif score >= q50:
+            return '良好(B)'
+        else:
+            return '合格(C)'
+
+    grade = assign_grade(S_score, q90, q75, q50)
+    print(f"  - Grade: {grade}")
+
+    return CI, FMI, RI, RSI, S_score, grade
+
+
+# - 新增：单条数据预测引导函数 -
+def main_one():
+    """主函数：单条数据预测引导
+    用户输入参数，调用离散化函数，使用模型进行预测，并输出概率和结论。
+    如果预测状态为'正常'且概率最高，则进入精细化评价流程。
+    """
+    print("🔍 开始单条设备状态预测...")
+    # 1. 加载模型
+    print(f"📦 加载模型: {MODEL_PATH}")
+    with open(MODEL_PATH, 'rb') as f:
+        model = pickle.load(f)
+    print(f"✅ 模型加载成功，包含 {len(model.nodes())} 个节点")
+
+    # 2. 加载配置
+    print("⚙️ 加载配置...")
+    binning_config = load_binning_config(BINNING_CONFIG_PATH)
+
+    # 3. 从配置获取列名
+    dataset_config = binning_config["metadata"]["dataset_config"]
+    id_cols = dataset_config["id_cols"]
+    categorical_cols = dataset_config["categorical_cols"]
+    target_col = dataset_config["target_col"]  # Now defined here
+    numerical_cols = dataset_config["numerical_cols"]
+    normal_value = binning_config.get("metadata", {}).get("dataset_config", {}).get("normal_value") or \
+                   binning_config.get("data_info", {}).get("target_info", {}).get(
+                       "normal_value")  # Get normal_value here
+
+    # 4. 引导用户逐个输入参数
+    print("- 请输入设备当前的实时参数 -")
+    user_inputs = {}
+
+    # 4a. 输入数值特征
+    binning_info = binning_config["data_info"]["binning_info"]
+    for col in numerical_cols:
+        while True:
+            try:
+                # 从配置中获取范围以提供提示
+                min_val = binning_info[col]["original_stats"]["min"]
+                max_val = binning_info[col]["original_stats"]["max"]
+                print(f" {col} (范围: {min_val:.4f} ~ {max_val:.4f}): ", end="")
+                user_val = float(input())
+                user_inputs[col] = user_val
+                break
+            except ValueError:
+                print(" ❌ 请输入一个有效的数字。")
+            except KeyError:
+                # 如果配置中没有范围信息，也允许输入
+                print(f" {col}: ", end="")
+                user_val = float(input())
+                user_inputs[col] = user_val
+                break
+
+    # 4b. 输入类别特征
+    categorical_info = binning_config["data_info"]["categorical_info"]
+    for col in categorical_cols:
+        while True:
+            try:
+                possible_values = categorical_info[col]["unique_values"]
+                print(f" {col} (可选值: {possible_values}): ", end="")
+                user_val = input().strip()
+                if user_val in possible_values:
+                    user_inputs[col] = user_val
+                    break
+                else:
+                    print(f" ❌ 请输入一个有效的值，例如: {possible_values[0]}")
+            except (KeyError, IndexError):
+                # 如果配置中没有unique_values，也允许输入（但风险较高）
+                print(f" {col}: ", end="")
+                user_val = input().strip()
+                user_inputs[col] = user_val
+                break
+
+    # 5. 构造单行DataFrame
+    # 注意：目标列需要添加一个占位符，因为离散化函数会处理所有列
+    user_inputs[target_col] = "占位符"
+    single_row_df = pd.DataFrame([user_inputs])
+    print(f"✅ 用户输入数据: \n{single_row_df}")
+
+    # 6. 对输入数据进行离散化
+    print("🔄 正在处理输入数据...")
+    discrete_input = discretize_raw_data_for_prediction(single_row_df, binning_config)
+    print(f"✅ 离散化后数据: \n{discrete_input}")
+
+    # 7. 调用预测函数
+    print("🔮 正在进行状态预测...")
+    # Pass dataset_config to predict_with_model
+    predictions, prediction_probs = predict_with_model(model, discrete_input, target_col=target_col,
+                                                       normal_value=normal_value, dataset_config=dataset_config)
+
+    # 8. 加载网络规则
+    print("📋 加载网络规则...")
+    try:
+        network_rules = load_network_rules(RULES_PATH)
+        print(f"✅ 成功加载 {len(network_rules)} 条规则")
+    except Exception as e:
+        print(f"⚠️ 警告: 加载规则文件失败: {e}")
+        network_rules = []
+
+    # 9. 输出结果
+    predicted_status = predictions[0]  # 只有一条数据
+    all_status_probs = prediction_probs[0]  # 只有一条数据的概率字典
+
+    # --- 新增：检查概率字典是否为空 ---
+    if not all_status_probs:
+        print("❌ 贝叶斯网络推理失败，无法获得状态概率。无法进行后续评价。")
+        print("=" * 50)
+        print("❌ 质量评价失败！")
+        return  # 直接退出函数
+
+    max_prob = all_status_probs.get(predicted_status, 0.0)
+
+    # 根据预测状态提取需要关注的参数
+    key_parameters = get_key_parameters_for_status(predicted_status, network_rules)
+    key_params_str = "/".join(key_parameters) if key_parameters else "无"
+
+    print("")
+    print("=" * 50)
+    print("📊 预测结果")
+    print("=" * 50)
+    print(f"最可能的状态是: {predicted_status}，概率为{max_prob:.4f} (最高概率)")
+    print(f"需要特别关注的参数为: {key_params_str}")
+    print("各状态的预测概率:")
+    # 对概率进行降序排序
+    sorted_probs = sorted(all_status_probs.items(), key=lambda x: x[1], reverse=True)
+    for status, prob in sorted_probs:
+        if status == predicted_status:
+            print(f" 🎯 {status}: {prob:.4f} (最高概率)")
+        else:
+            print(f" {status}: {prob:.4f}")
+
+    # --- 新增逻辑：如果预测状态是'正常'且概率最高，则执行评价 ---
+    # 修复：检查 all_status_probs 是否为空，再计算 max
+    if all_status_probs and predicted_status == normal_value and max_prob == max(all_status_probs.values()):
+        print(f"\n✅ 预测状态为 '{normal_value}' 且概率最高，开始精细化评价...")
+
+        # Load normal dataset and config for evaluation (pass normal_value)
+        df_normal, discrete_features, config = load_normal_dataset_and_config_for_evaluation(DATA_PATH,
+                                                                                             BINNING_CONFIG_PATH,
+                                                                                             normal_value)
+
+        # Prepare user input for evaluation (add CI from BN prediction)
+        user_inputs_discrete_for_eval = discrete_input.iloc[0].to_dict()
+        user_inputs_discrete_for_eval['CI_from_bn'] = max_prob  # Pass CI to evaluation
+
+        # Perform the full evaluation (pass all necessary variables)
+        CI, FMI, RI, RSI, S_score, grade = perform_evaluation(
+            user_inputs_discrete_for_eval, model, df_normal, discrete_features, normal_value, target_col, config
+        )
+
+        # Print final evaluation result
+        print("\n--- 精细化评价结果 ---")
+        print(f"设备当前状态: {predicted_status} (概率: {max_prob:.4f})")
+        print(f"质量置信度指数 (CI): {CI:.4f}")
+        print(f"特征匹配度指数 (FMI): {FMI:.4f}")
+        print(f"鲁棒性指数 (RI): {RI:.4f}")
+        print(f"规则满足度指数 (RSI): {RSI:.4f}")
+        print(f"综合评分 (S): {S_score:.4f}")
+        print(f"评价等级: {grade}")
+        print("=" * 50)
+
+        # Generate and save evaluation report
+        eval_report_text = f"""精细化评价报告
+===========================
+设备当前状态: {predicted_status} (概率: {max_prob:.4f})
+质量置信度指数 (CI): {CI:.4f}
+特征匹配度指数 (FMI): {FMI:.4f}
+鲁棒性指数 (RI): {RI:.4f}
+规则满足度指数 (RSI): {RSI:.4f}
+综合评分 (S): {S_score:.4f}
+评价等级: {grade}
+生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+"""
+        eval_report_filename = f"evaluation_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
+        eval_report_path = os.path.join(EVALUATION_RESULT_DIR, eval_report_filename)
+        with open(eval_report_path, 'w', encoding='utf-8') as f:
+            f.write(eval_report_text)
+        print(f"📄 精细化评价报告已保存至: {eval_report_path}")
+    else:
+        if not all_status_probs:
+            print(f"\n⚠️ 无法进行精细化评价：贝叶斯网络未返回概率。")
+        else:
+            print(f"\n⚠️ 预测状态为 '{predicted_status}'，不满足进入精细化评价的条件（必须为'{normal_value}'且概率最高）。")
+
+    print("=" * 50)
+    print("✅ 质量评价完成！")
+
+
+def main():
+    """
+    主函数（批量预测，保留但不使用）
+    """
+    print("🔍 开始贝叶斯网络预测...")
+
+    # 1. 加载模型
+    print(f"📦 加载模型: {MODEL_PATH}")
+    with open(MODEL_PATH, 'rb') as f:
+        model = pickle.load(f)
+    print(f"✅ 模型加载成功，包含 {len(model.nodes())} 个节点")
+
+    # 2. 加载配置
+    print("⚙️ 加载配置...")
+    binning_config = load_binning_config(BINNING_CONFIG_PATH)
+
+    # 3. 加载测试数据
+    print(f"📊 加载测试数据: {DATA_PATH}")
+    raw_test_data = pd.read_csv(DATA_PATH, encoding='utf-8')
+
+    # 从配置获取列名
+    dataset_config = binning_config["metadata"]["dataset_config"]
+    id_cols = dataset_config["id_cols"]
+    categorical_cols = dataset_config["categorical_cols"]
+    target_col = dataset_config["target_col"]
+    numerical_cols = dataset_config["numerical_cols"]
+
+    all_cols = id_cols + categorical_cols + [target_col] + numerical_cols
+
+    # 验证列名是否匹配
+    if list(raw_test_data.columns) != all_cols:
+        print(f"⚠️ 警告: CSV 列名与配置不完全匹配")
+        print(f"   CSV 列: {list(raw_test_data.columns)}")
+        print(f"   配置列: {all_cols}")
+        # 如果顺序不一致，需要重新排序
+        if set(raw_test_data.columns) == set(all_cols):
+            print("   ✅ 列名匹配，仅顺序不同，重新排序...")
+            raw_test_data = raw_test_data[all_cols]
+        else:
+            print("   ❌ 列名不匹配，请检查数据文件和配置")
+            # 尝试使用配置顺序（如果 CSV 没有表头）
+            raw_test_data = pd.read_csv(DATA_PATH, header=None, names=all_cols, encoding='utf-8')
+
+    print(f"   数据形状: {raw_test_data.shape}")
+
+    # 4. 对测试数据进行离散化（与训练时一致！）
+    print("🔄 对测试数据进行离散化（与训练时一致）...")
+    discrete_test_data = discretize_raw_data_for_prediction(raw_test_data, binning_config)
+
+    # 5. 获取真实标签
+    y_true = discrete_test_data[target_col].tolist()
+    print(f"   真实标签数量: {len(y_true)}")
+    print(f"   真实标签类别: {sorted(list(set(y_true)))}")
+
+    # 6. 进行预测
+    print("🔮 执行预测...")
+    # 从配置中获取正常值
+    normal_value = binning_config.get("metadata", {}).get("dataset_config", {}).get("normal_value") or \
+                   binning_config.get("data_info", {}).get("target_info", {}).get("normal_value")
+    y_pred, prediction_probs = predict_with_model(model, discrete_test_data, target_col, normal_value=normal_value)
+
+    # 7. 获取目标状态列表
+    target_states = sorted(list(set(y_true + y_pred)))
+    print(f"   涉及状态类别: {target_states}")
+
+    # 8. 生成文件名
+    report_filename = f"prediction_report.txt"
+    cm_filename = f"confusion_matrix.png"
+    results_filename = f"prediction_results.csv"
+
+    report_path = os.path.join(RESULT_DIR, report_filename)
+    cm_path = os.path.join(RESULT_DIR, cm_filename)
+    results_path = os.path.join(RESULT_DIR, results_filename)
+
+    # 9. 生成并保存报告
+    save_prediction_report(y_true, y_pred, prediction_probs, MODEL_PATH, report_path)
+
+    # 10. 生成并保存混淆矩阵
+    save_confusion_matrix(y_true, y_pred, target_states, cm_path)
+
+    # 11. 生成并保存预测结果
+    save_prediction_results(y_true, y_pred, prediction_probs, results_path)
+
+    # 12. 打印摘要
+    accuracy = accuracy_score(y_true, y_pred)
+    print("\n" + "=" * 60)
+    print("预测完成！摘要信息:")
+    print(f"  模型路径: {MODEL_PATH}")
+    print(f"  总体准确度: {accuracy:.4f}")
+    print(f"  测试样本数: {len(y_true)}")
+    print(f"  涉及状态数: {len(target_states)}")
+    print(f"  预测报告: {report_path}")
+    print(f"  混淆矩阵: {cm_path}")
+    print(f"  预测结果: {results_path}")
+    print("=" * 60)
+
+if __name__ == "__main__":
+    # main() # 批量预测
+    main_one()  # 单条预测及评价

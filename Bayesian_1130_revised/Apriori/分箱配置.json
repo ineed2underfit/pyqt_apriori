@@ -1,0 +1,744 @@
+{
+  "metadata": {
+    "created_time": "2025-12-23 14:38:12",
+    "export_version": "2.0",
+    "num_bins": 5,
+    "discretization_method": "kmeans",
+    "dataset_config": {
+      "numerical_cols": [
+        "液压压力",
+        "流量",
+        "油温",
+        "振动频率",
+        "油液清洁度"
+      ],
+      "categorical_cols": [
+        "department"
+      ],
+      "target_col": "status",
+      "id_cols": [
+        "设备型号",
+        "设备名称",
+        "time"
+      ],
+      "normal_value": "正常",
+      "col_mapping": {},
+      "feature_names": {
+        "液压压力": "液压压力",
+        "流量": "流量",
+        "油温": "油温",
+        "振动频率": "振动频率",
+        "油液清洁度": "油液清洁度"
+      }
+    },
+    "rule_config": {
+      "rule_pattern": "prediction",
+      "target_in_consequent": true,
+      "target_in_antecedent": false,
+      "custom_filter": null,
+      "strict_target_consequent": false
+    },
+    "cleaning_report": {
+      "original_shape": [
+        2000,
+        10
+      ],
+      "cleaned_shape": [
+        2000,
+        10
+      ],
+      "rows_removed": 0,
+      "columns_removed": 0,
+      "cleaning_actions": [
+        "用中位数 138.22 填充 '液压压力' 的 1 个缺失值",
+        "用中位数 101.29 填充 '流量' 的 1 个缺失值",
+        "用中位数 53.71 填充 '油温' 的 1 个缺失值"
+      ],
+      "data_quality_improvement": {
+        "missing_values_before": 3,
+        "missing_values_after": 0,
+        "duplicates_removed": 0,
+        "outliers_processed": 0
+      }
+    }
+  },
+  "data_info": {
+    "binning_info": {
+      "液压压力": {
+        "bins": [
+          0.0187090476591311,
+          42.868882302074326,
+          89.95865624243226,
+          134.6395305121124,
+          168.33912749094657,
+          204.3814738552564
+        ],
+        "labels": [
+          "极低液压压力",
+          "低液压压力",
+          "中液压压力",
+          "高液压压力",
+          "极高液压压力"
+        ],
+        "ranges": [
+          {
+            "label": "极低液压压力",
+            "min": 0.0187090476591311,
+            "max": 42.868882302074326,
+            "range_text": "0.02 - 42.87"
+          },
+          {
+            "label": "低液压压力",
+            "min": 42.868882302074326,
+            "max": 89.95865624243226,
+            "range_text": "42.87 - 89.96"
+          },
+          {
+            "label": "中液压压力",
+            "min": 89.95865624243226,
+            "max": 134.6395305121124,
+            "range_text": "89.96 - 134.64"
+          },
+          {
+            "label": "高液压压力",
+            "min": 134.6395305121124,
+            "max": 168.33912749094657,
+            "range_text": "134.64 - 168.34"
+          },
+          {
+            "label": "极高液压压力",
+            "min": 168.33912749094657,
+            "max": 204.3814738552564,
+            "range_text": "168.34 - 204.38"
+          }
+        ],
+        "feature_chinese_name": "液压压力",
+        "num_bins": 5
+      },
+      "流量": {
+        "bins": [
+          20.03487161779531,
+          49.69127336728255,
+          84.37311708389095,
+          116.97068331813199,
+          178.28582240543557,
+          269.9324062530005
+        ],
+        "labels": [
+          "极低流量",
+          "低流量",
+          "中流量",
+          "高流量",
+          "极高流量"
+        ],
+        "ranges": [
+          {
+            "label": "极低流量",
+            "min": 20.03487161779531,
+            "max": 49.69127336728255,
+            "range_text": "20.03 - 49.69"
+          },
+          {
+            "label": "低流量",
+            "min": 49.69127336728255,
+            "max": 84.37311708389095,
+            "range_text": "49.69 - 84.37"
+          },
+          {
+            "label": "中流量",
+            "min": 84.37311708389095,
+            "max": 116.97068331813199,
+            "range_text": "84.37 - 116.97"
+          },
+          {
+            "label": "高流量",
+            "min": 116.97068331813199,
+            "max": 178.28582240543557,
+            "range_text": "116.97 - 178.29"
+          },
+          {
+            "label": "极高流量",
+            "min": 178.28582240543557,
+            "max": 269.9324062530005,
+            "range_text": "178.29 - 269.93"
+          }
+        ],
+        "feature_chinese_name": "流量",
+        "num_bins": 5
+      },
+      "油温": {
+        "bins": [
+          28.55791944911802,
+          44.1296874312024,
+          57.44732970913665,
+          71.36507303359583,
+          94.76849349448361,
+          125.6516463798602
+        ],
+        "labels": [
+          "极低油温",
+          "低油温",
+          "中油温",
+          "高油温",
+          "极高油温"
+        ],
+        "ranges": [
+          {
+            "label": "极低油温",
+            "min": 28.55791944911802,
+            "max": 44.1296874312024,
+            "range_text": "28.56 - 44.13"
+          },
+          {
+            "label": "低油温",
+            "min": 44.1296874312024,
+            "max": 57.44732970913665,
+            "range_text": "44.13 - 57.45"
+          },
+          {
+            "label": "中油温",
+            "min": 57.44732970913665,
+            "max": 71.36507303359583,
+            "range_text": "57.45 - 71.37"
+          },
+          {
+            "label": "高油温",
+            "min": 71.36507303359583,
+            "max": 94.76849349448361,
+            "range_text": "71.37 - 94.77"
+          },
+          {
+            "label": "极高油温",
+            "min": 94.76849349448361,
+            "max": 125.6516463798602,
+            "range_text": "94.77 - 125.65"
+          }
+        ],
+        "feature_chinese_name": "油温",
+        "num_bins": 5
+      },
+      "振动频率": {
+        "bins": [
+          4.138271847852831,
+          9.784485803155667,
+          14.793461098465915,
+          19.867454635071695,
+          29.94021101046176,
+          44.99113512845959
+        ],
+        "labels": [
+          "极低振动频率",
+          "低振动频率",
+          "中振动频率",
+          "高振动频率",
+          "极高振动频率"
+        ],
+        "ranges": [
+          {
+            "label": "极低振动频率",
+            "min": 4.138271847852831,
+            "max": 9.784485803155667,
+            "range_text": "4.14 - 9.78"
+          },
+          {
+            "label": "低振动频率",
+            "min": 9.784485803155667,
+            "max": 14.793461098465915,
+            "range_text": "9.78 - 14.79"
+          },
+          {
+            "label": "中振动频率",
+            "min": 14.793461098465915,
+            "max": 19.867454635071695,
+            "range_text": "14.79 - 19.87"
+          },
+          {
+            "label": "高振动频率",
+            "min": 19.867454635071695,
+            "max": 29.94021101046176,
+            "range_text": "19.87 - 29.94"
+          },
+          {
+            "label": "极高振动频率",
+            "min": 29.94021101046176,
+            "max": 44.99113512845959,
+            "range_text": "29.94 - 44.99"
+          }
+        ],
+        "feature_chinese_name": "振动频率",
+        "num_bins": 5
+      },
+      "油液清洁度": {
+        "bins": [
+          0.1655319972905715,
+          23.834250885833455,
+          58.407737372893756,
+          86.6422448179307,
+          93.53220293387633,
+          100.65025624917638
+        ],
+        "labels": [
+          "极低油液清洁度",
+          "低油液清洁度",
+          "中油液清洁度",
+          "高油液清洁度",
+          "极高油液清洁度"
+        ],
+        "ranges": [
+          {
+            "label": "极低油液清洁度",
+            "min": 0.1655319972905715,
+            "max": 23.834250885833455,
+            "range_text": "0.17 - 23.83"
+          },
+          {
+            "label": "低油液清洁度",
+            "min": 23.834250885833455,
+            "max": 58.407737372893756,
+            "range_text": "23.83 - 58.41"
+          },
+          {
+            "label": "中油液清洁度",
+            "min": 58.407737372893756,
+            "max": 86.6422448179307,
+            "range_text": "58.41 - 86.64"
+          },
+          {
+            "label": "高油液清洁度",
+            "min": 86.6422448179307,
+            "max": 93.53220293387633,
+            "range_text": "86.64 - 93.53"
+          },
+          {
+            "label": "极高油液清洁度",
+            "min": 93.53220293387633,
+            "max": 100.65025624917638,
+            "range_text": "93.53 - 100.65"
+          }
+        ],
+        "feature_chinese_name": "油液清洁度",
+        "num_bins": 5
+      }
+    },
+    "categorical_info": {
+      "department": {
+        "feature_name": "department",
+        "feature_type": "categorical",
+        "description": "分类特征: department",
+        "unique_values": [
+          "生产部A",
+          "维修部C",
+          "液压部B"
+        ],
+        "value_counts": {
+          "生产部A": 1000,
+          "维修部C": 500,
+          "液压部B": 500
+        },
+        "value_distribution": {
+          "生产部A": {
+            "count": 1000,
+            "percentage": 50.0
+          },
+          "维修部C": {
+            "count": 500,
+            "percentage": 25.0
+          },
+          "液压部B": {
+            "count": 500,
+            "percentage": 25.0
+          }
+        },
+        "total_unique": 3,
+        "most_frequent": "生产部A",
+        "least_frequent": "液压部B"
+      }
+    },
+    "target_info": {
+      "target_column": "status",
+      "normal_value": "正常",
+      "feature_type": "target",
+      "description": "目标变量: status",
+      "unique_values": [
+        "正常",
+        "液压泄漏",
+        "阀门故障",
+        "污染故障",
+        "油温过高",
+        "泵磨损"
+      ],
+      "value_counts": {
+        "正常": 1158,
+        "液压泄漏": 204,
+        "阀门故障": 196,
+        "污染故障": 154,
+        "油温过高": 153,
+        "泵磨损": 135
+      },
+      "value_distribution": {
+        "正常": {
+          "count": 1158,
+          "percentage": 57.9,
+          "type": "normal"
+        },
+        "液压泄漏": {
+          "count": 204,
+          "percentage": 10.2,
+          "type": "abnormal"
+        },
+        "阀门故障": {
+          "count": 196,
+          "percentage": 9.8,
+          "type": "abnormal"
+        },
+        "污染故障": {
+          "count": 154,
+          "percentage": 7.7,
+          "type": "abnormal"
+        },
+        "油温过高": {
+          "count": 153,
+          "percentage": 7.65,
+          "type": "abnormal"
+        },
+        "泵磨损": {
+          "count": 135,
+          "percentage": 6.75,
+          "type": "abnormal"
+        }
+      },
+      "total_unique": 6,
+      "normal_ratio": 57.9,
+      "abnormal_ratio": 42.1,
+      "normal_count": 1158,
+      "abnormal_count": 842,
+      "abnormal_types": [
+        "液压泄漏",
+        "阀门故障",
+        "污染故障",
+        "油温过高",
+        "泵磨损"
+      ],
+      "class_balance": "imbalanced"
+    },
+    "normalized_data_info": {
+      "normalization_method": "discretization_binning",
+      "description": "通过分箱离散化进行数据归一化",
+      "features": {
+        "液压压力": {
+          "feature_name": "液压压力",
+          "feature_chinese_name": "液压压力",
+          "original_type": "numerical",
+          "normalized_type": "categorical_discrete",
+          "original_stats": {
+            "min": 0.0187090476591311,
+            "max": 204.3814738552564,
+            "mean": 129.99600967137917,
+            "std": 49.50498093027129,
+            "median": 138.22290870724066,
+            "q25": 106.72982349723485,
+            "q75": 168.92727529697885
+          },
+          "normalization_details": {
+            "method": "kmeans_binning",
+            "num_bins": 5,
+            "bin_labels": [
+              "极低液压压力",
+              "低液压压力",
+              "中液压压力",
+              "高液压压力",
+              "极高液压压力"
+            ],
+            "bin_boundaries": [
+              0.0187090476591311,
+              42.868882302074326,
+              89.95865624243226,
+              134.6395305121124,
+              168.33912749094657,
+              204.3814738552564
+            ]
+          },
+          "normalized_distribution": {
+            "极低液压压力": {
+              "count": 148,
+              "percentage": 7.4
+            },
+            "低液压压力": {
+              "count": 251,
+              "percentage": 12.55
+            },
+            "中液压压力": {
+              "count": 545,
+              "percentage": 27.25
+            },
+            "高液压压力": {
+              "count": 550,
+              "percentage": 27.5
+            },
+            "极高液压压力": {
+              "count": 506,
+              "percentage": 25.3
+            }
+          }
+        },
+        "流量": {
+          "feature_name": "流量",
+          "feature_chinese_name": "流量",
+          "original_type": "numerical",
+          "normalized_type": "categorical_discrete",
+          "original_stats": {
+            "min": 20.03487161779531,
+            "max": 269.9324062530005,
+            "mean": 105.87583180529491,
+            "std": 52.331628607952084,
+            "median": 101.29171472514628,
+            "q25": 69.87807045663558,
+            "q75": 131.46876034417124
+          },
+          "normalization_details": {
+            "method": "kmeans_binning",
+            "num_bins": 5,
+            "bin_labels": [
+              "极低流量",
+              "低流量",
+              "中流量",
+              "高流量",
+              "极高流量"
+            ],
+            "bin_boundaries": [
+              20.03487161779531,
+              49.69127336728255,
+              84.37311708389095,
+              116.97068331813199,
+              178.28582240543557,
+              269.9324062530005
+            ]
+          },
+          "normalized_distribution": {
+            "极低流量": {
+              "count": 218,
+              "percentage": 10.9
+            },
+            "低流量": {
+              "count": 524,
+              "percentage": 26.2
+            },
+            "中流量": {
+              "count": 508,
+              "percentage": 25.4
+            },
+            "高流量": {
+              "count": 547,
+              "percentage": 27.35
+            },
+            "极高流量": {
+              "count": 203,
+              "percentage": 10.15
+            }
+          }
+        },
+        "油温": {
+          "feature_name": "油温",
+          "feature_chinese_name": "油温",
+          "original_type": "numerical",
+          "normalized_type": "categorical_discrete",
+          "original_stats": {
+            "min": 28.55791944911802,
+            "max": 125.6516463798602,
+            "mean": 56.381650850745366,
+            "std": 19.532582049383024,
+            "median": 53.70868287054487,
+            "q25": 41.632436386490724,
+            "q75": 65.68562038390071
+          },
+          "normalization_details": {
+            "method": "kmeans_binning",
+            "num_bins": 5,
+            "bin_labels": [
+              "极低油温",
+              "低油温",
+              "中油温",
+              "高油温",
+              "极高油温"
+            ],
+            "bin_boundaries": [
+              28.55791944911802,
+              44.1296874312024,
+              57.44732970913665,
+              71.36507303359583,
+              94.76849349448361,
+              125.6516463798602
+            ]
+          },
+          "normalized_distribution": {
+            "极低油温": {
+              "count": 605,
+              "percentage": 30.25
+            },
+            "低油温": {
+              "count": 566,
+              "percentage": 28.3
+            },
+            "中油温": {
+              "count": 518,
+              "percentage": 25.9
+            },
+            "高油温": {
+              "count": 190,
+              "percentage": 9.5
+            },
+            "极高油温": {
+              "count": 121,
+              "percentage": 6.05
+            }
+          }
+        },
+        "振动频率": {
+          "feature_name": "振动频率",
+          "feature_chinese_name": "振动频率",
+          "original_type": "numerical",
+          "normalized_type": "categorical_discrete",
+          "original_stats": {
+            "min": 4.138271847852831,
+            "max": 44.99113512845959,
+            "mean": 16.61932303263982,
+            "std": 8.042037195355784,
+            "median": 15.862263064502004,
+            "q25": 10.559697805959209,
+            "q75": 21.407391648903356
+          },
+          "normalization_details": {
+            "method": "kmeans_binning",
+            "num_bins": 5,
+            "bin_labels": [
+              "极低振动频率",
+              "低振动频率",
+              "中振动频率",
+              "高振动频率",
+              "极高振动频率"
+            ],
+            "bin_boundaries": [
+              4.138271847852831,
+              9.784485803155667,
+              14.793461098465915,
+              19.867454635071695,
+              29.94021101046176,
+              44.99113512845959
+            ]
+          },
+          "normalized_distribution": {
+            "极低振动频率": {
+              "count": 440,
+              "percentage": 22.0
+            },
+            "低振动频率": {
+              "count": 446,
+              "percentage": 22.3
+            },
+            "中振动频率": {
+              "count": 479,
+              "percentage": 23.95
+            },
+            "高振动频率": {
+              "count": 500,
+              "percentage": 25.0
+            },
+            "极高振动频率": {
+              "count": 135,
+              "percentage": 6.75
+            }
+          }
+        },
+        "油液清洁度": {
+          "feature_name": "油液清洁度",
+          "feature_chinese_name": "油液清洁度",
+          "original_type": "numerical",
+          "normalized_type": "categorical_discrete",
+          "original_stats": {
+            "min": 0.1655319972905715,
+            "max": 100.65025624917638,
+            "mean": 79.81945691983356,
+            "std": 24.82838557680696,
+            "median": 88.01337200952037,
+            "q25": 82.16789919810566,
+            "q75": 94.04947571675838
+          },
+          "normalization_details": {
+            "method": "kmeans_binning",
+            "num_bins": 5,
+            "bin_labels": [
+              "极低油液清洁度",
+              "低油液清洁度",
+              "中油液清洁度",
+              "高油液清洁度",
+              "极高油液清洁度"
+            ],
+            "bin_boundaries": [
+              0.1655319972905715,
+              23.834250885833455,
+              58.407737372893756,
+              86.6422448179307,
+              93.53220293387633,
+              100.65025624917638
+            ]
+          },
+          "normalized_distribution": {
+            "极低油液清洁度": {
+              "count": 153,
+              "percentage": 7.65
+            },
+            "低油液清洁度": {
+              "count": 154,
+              "percentage": 7.7
+            },
+            "中油液清洁度": {
+              "count": 572,
+              "percentage": 28.6
+            },
+            "高油液清洁度": {
+              "count": 588,
+              "percentage": 29.4
+            },
+            "极高油液清洁度": {
+              "count": 533,
+              "percentage": 26.65
+            }
+          }
+        },
+        "department": {
+          "feature_name": "department",
+          "original_type": "categorical",
+          "normalized_type": "categorical_encoded",
+          "normalization_details": {
+            "method": "prefix_encoding",
+            "encoding_format": "department_{value}"
+          },
+          "normalized_distribution": {
+            "department_生产部A": {
+              "count": 1000,
+              "percentage": 50.0
+            },
+            "department_维修部C": {
+              "count": 500,
+              "percentage": 25.0
+            },
+            "department_液压部B": {
+              "count": 500,
+              "percentage": 25.0
+            }
+          }
+        }
+      }
+    },
+    "dataset_summary": {
+      "total_rows": 2000,
+      "total_columns": 10,
+      "numerical_features": 5,
+      "categorical_features": 1,
+      "id_columns": 3,
+      "target_column": "status",
+      "discretization_method": "kmeans",
+      "num_bins": 5
+    }
+  }
+}

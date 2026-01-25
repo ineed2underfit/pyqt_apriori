@@ -357,10 +357,10 @@ class EquipmentAnalyzer:
         # 2. 设置分析参数
         print(f"\n📊 分析参数设置:")
 
-        # 最小支持度
+        # 最小完整支持度（全局支持度）
         while True:
             try:
-                support_input = input("最小支持度 (0.001-0.1，直接回车使用0.005): ").strip()
+                support_input = input("最小完整支持度 (0.001-0.1，直接回车使用0.005): ").strip()
                 if support_input == '':
                     min_support = 0.005
                     break
@@ -368,7 +368,22 @@ class EquipmentAnalyzer:
                 if 0.001 <= min_support <= 0.1:
                     break
                 else:
-                    print("❌ 支持度应在 0.001-0.1 之间")
+                    print("❌ 完整支持度应在 0.001-0.1 之间")
+            except:
+                print("❌ 请输入有效的数字")
+
+        # 最小支持度（故障类型支持度）
+        while True:
+            try:
+                new_support_input = input("最小支持度-规则占该故障类型的占比 (0.1-1.0，直接回车使用0.3): ").strip()
+                if new_support_input == '':
+                    min_new_support = 0.3
+                    break
+                min_new_support = float(new_support_input)
+                if 0.1 <= min_new_support <= 1.0:
+                    break
+                else:
+                    print("❌ 故障类型支持度应在 0.1-1.0 之间")
             except:
                 print("❌ 请输入有效的数字")
 
@@ -423,7 +438,8 @@ class EquipmentAnalyzer:
 
         print(f"\n✅ 参数配置完成:")
         print(f"  规则模式: {rule_pattern}")
-        print(f"  最小支持度: {min_support}")
+        print(f"  最小完整支持度: {min_support}")
+        print(f"  最小支持度（故障类型占比）: {min_new_support}")
         print(f"  最小置信度: {min_confidence}")
         print(f"  最小提升度: {min_lift}")
         print(f"  分箱数量: {num_bins}")
@@ -435,6 +451,7 @@ class EquipmentAnalyzer:
 
         return {
             'min_support': min_support,
+            'min_new_support': min_new_support,
             'min_confidence': min_confidence,
             'min_lift': min_lift,
             'auto_optimize': auto_optimize
@@ -1373,13 +1390,14 @@ class EquipmentAnalyzer:
 
         return result
 
-    def optimize_discretization(self, df, min_support=0.05, min_lift=2.0, min_confidence=0.5):
+    def optimize_discretization(self, df, min_support=0.05, min_new_support=0.3, min_lift=2.0, min_confidence=0.5):
         """
         尝试不同的离散化方法，找到产生最佳故障预测规则的方法
 
         Args:
             df (pandas.DataFrame): 数据框
             min_support (float): 最小支持度
+            min_new_support (float): 最小支持度（规则占该故障类型的占比）
             min_lift (float): 最小提升度
             min_confidence (float): 最小置信度
 
@@ -1492,16 +1510,52 @@ class EquipmentAnalyzer:
                 # 过滤与故障类型相关的规则
                 valid_rules = self.filter_fault_related_rules(rules, min_confidence)
 
-                rules_count = len(valid_rules)
-                avg_lift = valid_rules['lift'].mean() if rules_count > 0 else 0
-                max_lift = valid_rules['lift'].max() if rules_count > 0 else 0
+                # 计算故障类型支持度并应用 min_new_support 筛选
+                target_col = self.dataset_config['target_col']
+                normal_value = self.dataset_config['normal_value']
+                
+                # 计算每个故障类型的总数量
+                fault_type_counts = {}
+                for _, row in processed_df.iterrows():
+                    fault_value = row[target_col]
+                    if fault_value != normal_value:
+                        if '_' in fault_value and fault_value.startswith(f'{target_col}_'):
+                            fault_type = fault_value.split('_', 1)[1]
+                        else:
+                            fault_type = fault_value
+                        fault_type_counts[fault_type] = fault_type_counts.get(fault_type, 0) + 1
+                
+                # 为每条规则计算故障类型支持度
+                filtered_rules = []
+                for _, row in valid_rules.iterrows():
+                    consequent_item = list(row['consequents'])[0]
+                    
+                    if consequent_item == normal_value:
+                        consequent = consequent_item
+                    elif '_' in consequent_item and consequent_item.startswith(f'{target_col}_'):
+                        consequent = consequent_item.split('_', 1)[1]
+                    else:
+                        consequent = consequent_item
+                    
+                    # 计算故障类型支持度
+                    if consequent in fault_type_counts:
+                        rule_sample_count = row['support'] * len(processed_df)
+                        fault_type_support = rule_sample_count / fault_type_counts[consequent]
+                        
+                        # 应用 min_new_support 筛选
+                        if fault_type_support >= min_new_support:
+                            filtered_rules.append(row)
+                
+                rules_count = len(filtered_rules)
+                avg_lift = pd.DataFrame(filtered_rules)['lift'].mean() if rules_count > 0 else 0
+                max_lift = pd.DataFrame(filtered_rules)['lift'].max() if rules_count > 0 else 0
 
                 # 保存此方法的规则数量和平均提升度
                 rule_counts[method] = rules_count
                 avg_lifts[method] = avg_lift
 
                 print(
-                    f"  方法 {method}: 找到 {rules_count} 条故障预测规则，平均提升度: {avg_lift:.2f}，最大提升度: {max_lift:.2f}")
+                    f"  方法 {method}: 找到 {rules_count} 条故障预测规则（已应用min_new_support={min_new_support}筛选），平均提升度: {avg_lift:.2f}，最大提升度: {max_lift:.2f}")
 
                 # 评估是否是最佳方法 (优先考虑规则数量，其次考虑平均提升度)
                 if rules_count > 0 and (rules_count > best_rules_count or
@@ -2189,19 +2243,20 @@ class EquipmentAnalyzer:
                 continue
         return features
 
-    def analyze(self, min_support=0.05, min_lift=2.0, min_confidence=0.5, auto_optimize=True, interactive=False):
+    def analyze(self, min_support=0.05, min_new_support=0.3, min_lift=2.0, min_confidence=0.5, auto_optimize=True, interactive=False):
         """
         执行关联分析
 
         Args:
             min_support (float): 频繁项集的最小支持度阈值，默认为 0.05
+            min_new_support (float): 最小支持度（规则占该故障类型的占比），默认为 0.3
             min_lift (float): 关联规则的最小提升度阈值，默认为 2.0
             min_confidence (float): 最小置信度阈值，默认为 0.5
             auto_optimize (bool): 是否自动优化离散化方法，默认为True
             interactive (bool): 是否使用交互式配置，默认为False
 
         Returns:
-            pandas.DataFrame: 包含有效关联规则的 DataFrame，列有 '规则'、'支持度'、'置信度' 和 '提升度'
+            pandas.DataFrame: 包含有效关联规则的 DataFrame，列有 '规则'、'完整支持度'、'故障类型支持度'、'置信度' 和 '提升度'
         """
         try:
             # 数据准备
@@ -2238,7 +2293,7 @@ class EquipmentAnalyzer:
             if auto_optimize:
                 print("\n正在进行离散化方法优化...")
                 optimize_start_time = time.time()
-                best_method, _ = self.optimize_discretization(cleaned_df, min_support, min_lift, min_confidence)
+                best_method, _ = self.optimize_discretization(cleaned_df, min_support, min_new_support, min_lift, min_confidence)
                 optimize_end_time = time.time()
                 optimize_total_time = optimize_end_time - optimize_start_time
                 print(f"离散化方法优化总耗时: {optimize_total_time:.2f} 秒")
@@ -2312,6 +2367,25 @@ class EquipmentAnalyzer:
             # 保存过滤后但未格式化的规则数量
             original_rule_count = len(valid_rules)
 
+            # 计算每个故障类型的总数量（用于计算故障类型支持度）
+            target_col = self.dataset_config['target_col']
+            normal_value = self.dataset_config['normal_value']
+            fault_type_counts = {}
+            
+            for _, row in processed_df.iterrows():
+                fault_value = row[target_col]
+                if fault_value != normal_value:
+                    # 提取故障类型（去掉前缀）
+                    if '_' in fault_value and fault_value.startswith(f'{target_col}_'):
+                        fault_type = fault_value.split('_', 1)[1]
+                    else:
+                        fault_type = fault_value
+                    fault_type_counts[fault_type] = fault_type_counts.get(fault_type, 0) + 1
+            
+            print(f"\n各故障类型样本数量：")
+            for fault_type, count in fault_type_counts.items():
+                print(f"  {fault_type}: {count}")
+
             # 结果格式化
             results = []
             rule_identifiers = set()  # 用于检测完全相同的规则
@@ -2345,15 +2419,29 @@ class EquipmentAnalyzer:
                     continue
                 rule_identifiers.add(rule_id)
 
+                # 计算故障类型支持度（规则占该故障类型的占比）
+                fault_type_support = 0.0
+                if consequent in fault_type_counts:
+                    # 规则的支持度 = 规则支持的样本数 / 总样本数
+                    # 故障类型支持度 = 规则支持的样本数 / 该故障类型的样本数
+                    rule_sample_count = row['support'] * len(processed_df)
+                    fault_type_support = rule_sample_count / fault_type_counts[consequent]
+
                 results.append({
                     '规则': rule_text,
-                    '支持度': round(row['support'], 4),
+                    '完整支持度': round(row['support'], 4),
+                    '故障类型支持度': round(fault_type_support, 4),
                     '置信度': round(row['confidence'], 4),
                     '提升度': round(row['lift'], 2),
                     '原始提升度': row['lift']
                 })
 
             result_df = pd.DataFrame(results)
+
+            # 按照故障类型支持度筛选
+            print(f"\n应用最小支持度筛选 (min_new_support={min_new_support})...")
+            result_df = result_df[result_df['故障类型支持度'] >= min_new_support]
+            print(f"筛选后剩余 {len(result_df)} 条规则")
 
             # 直接按原始提升度降序排序
             result_df = result_df.sort_values(by='原始提升度', ascending=False)
@@ -2362,13 +2450,13 @@ class EquipmentAnalyzer:
             if '原始提升度' in result_df.columns:
                 result_df = result_df.drop(columns=['原始提升度'])
 
-            print(f"分析完成，共生成 {len(result_df)} 条{rule_type}规则 (原始有效规则: {original_rule_count})")
+            print(f"分析完成，共生成 {len(result_df)} 条{rule_type}规则")
 
             # 分析丢失的规则数量
             rules_lost = original_rule_count - len(result_df)
             if rules_lost > 0:
                 print(
-                    f"注意: 格式化和去重过程中丢失了 {rules_lost} 条规则，这通常是由于多种原始规则组合映射到相同的文本表示")
+                    f"注意: 格式化、去重和筛选过程中过滤了 {rules_lost} 条规则")
 
             self.save_top_rules_plot(result_df)
 
@@ -2472,8 +2560,9 @@ if __name__ == "__main__":
             # 参数设置建议：
             # 小数据集(1000行)：min_support=0.03
             # 大数据集(1万+行)：min_support=0.01
+            # min_new_support: 最小支持度（规则占该故障类型的占比），建议0.1-0.3
             # auto_optimize=True会自动尝试不同的分箱方法找出最佳规则
-            results = analyzer.analyze(min_support=0.005, min_confidence=0.5, min_lift=1.2, auto_optimize=True)
+            results = analyzer.analyze(min_support=0.005, min_new_support=0.1, min_confidence=0.5, min_lift=1.2, auto_optimize=True)
 
         if results.empty:
             print("\n未找到符合条件的故障预测规则，请尝试调整参数")

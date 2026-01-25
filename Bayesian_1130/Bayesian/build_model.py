@@ -7,6 +7,7 @@ import numpy as np
 import json
 import re
 import networkx as nx
+import importlib.util
 from datetime import datetime
 from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.estimators import BayesianEstimator
@@ -30,18 +31,26 @@ def load_binning_config(path):
         return json.load(f)
 
 
+_UTILS_MODULE = None
+
+
+def _load_utils_module():
+    global _UTILS_MODULE
+    if _UTILS_MODULE is None:
+        utils_path = os.path.join(PROJECT_ROOT, "Bayesian", "utils.py")
+        spec = importlib.util.spec_from_file_location("bayesian_utils", utils_path)
+        if spec is None or spec.loader is None:
+            raise ImportError(f"无法加载 utils 模块: {utils_path}")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        _UTILS_MODULE = module
+    return _UTILS_MODULE
+
+
 def load_association_rules(path):
-    """读取关联规则 CSV（无 header），确保数值列为数值类型"""
-    df = pd.read_csv(path, header=None, names=["rules", "support", "confidence", "lift"], encoding='utf-8')
-
-    # 确保数值列被转换为float
-    for col in ['support', 'confidence', 'lift']:
-        df[col] = pd.to_numeric(df[col], errors='coerce')
-
-    # 删除包含NaN的行
-    df = df.dropna()
-    print(f"✅ 关联规则加载完成，有效规则数: {len(df)}")
-    return df
+    """读取关联规则 CSV，兼容新旧表头与无表头格式"""
+    utils_module = _load_utils_module()
+    return utils_module.load_association_rules(path)
 
 
 def create_node_to_column_mapping(binning_config):
