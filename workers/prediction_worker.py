@@ -1,7 +1,7 @@
 import importlib.util
 import os
 import shutil
-from contextlib import redirect_stdout
+from contextlib import redirect_stdout, redirect_stderr
 from PySide6.QtCore import QObject, Signal
 
 from common.utils import get_bayesian_root
@@ -110,8 +110,12 @@ class PredictionWorker(QObject):
         predict_status_module.RESULT_DIR = RESULT_DIR
 
         emitter = LogEmitter(self.log_message)
-        with redirect_stdout(emitter):
+        with redirect_stdout(emitter), redirect_stderr(emitter):
             predict_status_module.main()
+        emitter.flush()
+
+        if self.log_message:
+            self.log_message.emit(f"批量预测输出目录: {RESULT_DIR}")
 
         report_file = os.path.join(RESULT_DIR, "prediction_report.txt")
         if os.path.exists(report_file):
@@ -119,6 +123,8 @@ class PredictionWorker(QObject):
                 report_text = f.read()
         else:
             report_text = "预测完成，但未找到 prediction_report.txt"
+            if self.log_message:
+                self.log_message.emit(report_text)
         cm_path = os.path.join(RESULT_DIR, "confusion_matrix.png")
         if not os.path.exists(cm_path):
             cm_path = ""

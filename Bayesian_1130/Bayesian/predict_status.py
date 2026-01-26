@@ -11,6 +11,7 @@ import seaborn as sns
 from datetime import datetime
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 from pgmpy.inference import VariableElimination
+from joblib import parallel_backend
 
 _THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 if _THIS_DIR not in sys.path:
@@ -197,7 +198,12 @@ def batch_predict(model, df_discrete, dataset_config):
             encoded_data = encoded_data.drop(columns=[target_col])
 
         print(f"开始贝叶斯推理 (输入维度: {encoded_data.shape})...")
-        y_pred_df = model.predict(encoded_data)
+        try:
+            with parallel_backend("threading", n_jobs=1):
+                y_pred_df = model.predict(encoded_data, show_progress=False)
+        except Exception:
+            with parallel_backend("threading", n_jobs=1):
+                y_pred_df = model.predict(encoded_data)
 
         if target_col in y_pred_df.columns:
             y_pred = y_pred_df[target_col].tolist()

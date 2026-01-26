@@ -19,6 +19,7 @@ class Config(MyQConfig):
 
     auto_login = ConfigItem("MainWindow", "auto_login", False, BoolValidator())
     save_password = ConfigItem("MainWindow", "save_password", True, BoolValidator())
+    page4_debug_log = ConfigItem("Page4", "debug_log", False, BoolValidator())
 
 
 YEAR = datetime.datetime.now().year

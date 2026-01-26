@@ -12,6 +12,9 @@ from PySide6.QtWidgets import (
     QScrollArea,
 )
 from common.utils import show_dialog, get_data_directory, resolve_bayesian_path
+from common.config import cfg
+from components.bar import ProgressInfoBar
+from components.log_dialog import LogDialog
 from workers.prediction_worker import PredictionWorker, RESULT_DIR
 import os
 import re
@@ -24,6 +27,8 @@ class PageFourHandler(QObject):
         self.test_data_path = None
         self.thread = None
         self.worker = None
+        self.loading_bar = None
+        self.log_dialog = None
         self._last_single_input = None
 
     # --- 批量评估功能 ---
@@ -91,8 +96,12 @@ class PageFourHandler(QObject):
                 self._parent.progressBar.setValue(0)
                 self._parent.progressBar.setVisible(True)
         else:
-            # 批量预测仍然显示弹窗
-            show_dialog(self._parent, "正在进行批量预测...", "请稍候")
+            # 批量预测提示（非阻塞）
+            self.loading_bar = ProgressInfoBar("批量预测", "正在进行批量预测...", self._parent)
+            self.loading_bar.show()
+            if cfg.page4_debug_log.value:
+                self.log_dialog = LogDialog(title="批量预测日志", parent=self._parent)
+                self.log_dialog.show()
 
         self.thread = QThread()
         self.worker = PredictionWorker(model_path, data_payload, history_data_path=history_data_path)
@@ -103,6 +112,7 @@ class PageFourHandler(QObject):
         self.worker.single_prediction_finished.connect(self.on_single_assessment_finished)
         self.worker.progress_updated.connect(self.on_progress_updated)  # 连接进度信号
         self.worker.error.connect(self.on_assessment_error)
+        self.worker.log_message.connect(self._handle_log_message)
         self.thread.finished.connect(self.thread.deleteLater)
 
         self.thread.start()
@@ -256,6 +266,10 @@ class PageFourHandler(QObject):
         show_dialog(self._parent, f"评估失败: {error_message}", "错误")
         self.cleanup_thread()
 
+    def _handle_log_message(self, message: str):
+        if self.log_dialog:
+            self.log_dialog.append_log(message)
+
     def cleanup_thread(self):
         """清理线程"""
         if self.thread and self.thread.isRunning():
@@ -263,6 +277,12 @@ class PageFourHandler(QObject):
             self.thread.wait()
         self.thread = None
         self.worker = None
+        if self.loading_bar:
+            self.loading_bar.hide()
+            self.loading_bar = None
+        if self.log_dialog:
+            self.log_dialog.append_log("=== 批量预测流程已结束 ===")
+            self.log_dialog = None
         if self._parent:
             self._parent.pushButton_import.setEnabled(True)
             # 只有在选择了测试文件后，才重新启用批量评估按钮

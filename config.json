@@ -1,0 +1,17 @@
+{
+    "MainWindow": {
+        "auto_login": true,
+        "save_password": true
+    },
+    "Page4": {
+        "debug_log": false
+    },
+    "User": {
+        "password": "LLvlMZFX3q0Ik+209YzB+g==",
+        "user": "1"
+    },
+    "QFluentWidgets": {
+        "ThemeColor": "#ff70d5f3",
+        "ThemeMode": "Auto"
+    }
+}
