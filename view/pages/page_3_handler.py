@@ -2,6 +2,7 @@ from PySide6.QtCore import QObject, QThread
 
 from workers.bayesian_worker import BayesianWorker
 from components.log_dialog import LogDialog
+from common.config import cfg
 
 
 class PageThreeHandler(QObject):
@@ -29,15 +30,16 @@ class PageThreeHandler(QObject):
         self._parent.progressBar.setValue(0)
 
         try:
-            self.log_dialog = LogDialog(title="贝叶斯网络构建日志", parent=self._parent)
-            self.log_dialog.show()
+            if cfg.page3_debug_log.value:
+                self.log_dialog = LogDialog(title="贝叶斯网络构建日志", parent=self._parent)
+                self.log_dialog.show()
 
             self.thread = QThread()
             self.worker = BayesianWorker(dataset_path)
             self.worker.moveToThread(self.thread)
 
             self.thread.started.connect(self.worker.run)
-            self.worker.log_message.connect(self.log_dialog.append_log)
+            self.worker.log_message.connect(self._handle_log_message)
             self.worker.progress_updated.connect(self._parent.update_progress)
             self.worker.finished.connect(self.on_build_finished)
             self.worker.error.connect(self.on_build_error)
@@ -71,3 +73,7 @@ class PageThreeHandler(QObject):
             self.log_dialog = None
         if self._parent:
             self._parent.pushButton.setEnabled(True)
+
+    def _handle_log_message(self, message: str):
+        if self.log_dialog:
+            self.log_dialog.append_log(message)

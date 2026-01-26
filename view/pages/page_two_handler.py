@@ -2,6 +2,7 @@ import os
 import shutil
 from PySide6.QtCore import QObject, QThread, Signal
 from components.log_dialog import LogDialog
+from common.config import cfg
 from workers.apriori_worker import AprioriWorker
 from common.utils import show_dialog
 
@@ -46,8 +47,9 @@ class PageTwoHandler(QObject):
         self._skip_cleaning_logs = cleaned_df is not None
 
         try:
-            self.log_dialog = LogDialog(title="规则挖掘日志", parent=self._parent)
-            self.log_dialog.show()
+            if cfg.page2_debug_log.value:
+                self.log_dialog = LogDialog(title="规则挖掘日志", parent=self._parent)
+                self.log_dialog.show()
 
             self.thread = QThread()
             params = {

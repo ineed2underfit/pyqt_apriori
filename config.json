@@ -3,8 +3,14 @@
         "auto_login": true,
         "save_password": true
     },
-    "Page4": {
+    "Page2": {
         "debug_log": false
+    },
+    "Page3": {
+        "debug_log": false
+    },
+    "Page4": {
+        "debug_log": true
     },
     "User": {
         "password": "LLvlMZFX3q0Ik+209YzB+g==",
