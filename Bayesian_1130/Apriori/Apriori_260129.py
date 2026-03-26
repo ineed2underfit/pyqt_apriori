@@ -1518,11 +1518,12 @@ class EquipmentAnalyzer:
                 fault_type_counts = {}
                 for _, row in processed_df.iterrows():
                     fault_value = row[target_col]
-                    if '_' in fault_value and fault_value.startswith(f'{target_col}_'):
-                        fault_type = fault_value.split('_', 1)[1]
-                    else:
-                        fault_type = fault_value
-                    fault_type_counts[fault_type] = fault_type_counts.get(fault_type, 0) + 1
+                    if fault_value != normal_value:
+                        if '_' in fault_value and fault_value.startswith(f'{target_col}_'):
+                            fault_type = fault_value.split('_', 1)[1]
+                        else:
+                            fault_type = fault_value
+                        fault_type_counts[fault_type] = fault_type_counts.get(fault_type, 0) + 1
                 
                 # 为每条规则计算故障类型支持度
                 filtered_rules = []
@@ -2373,14 +2374,15 @@ class EquipmentAnalyzer:
             
             for _, row in processed_df.iterrows():
                 fault_value = row[target_col]
-                # 提取类型（去掉前缀），包含正常值
-                if '_' in fault_value and fault_value.startswith(f'{target_col}_'):
-                    fault_type = fault_value.split('_', 1)[1]
-                else:
-                    fault_type = fault_value
-                fault_type_counts[fault_type] = fault_type_counts.get(fault_type, 0) + 1
+                if fault_value != normal_value:
+                    # 提取故障类型（去掉前缀）
+                    if '_' in fault_value and fault_value.startswith(f'{target_col}_'):
+                        fault_type = fault_value.split('_', 1)[1]
+                    else:
+                        fault_type = fault_value
+                    fault_type_counts[fault_type] = fault_type_counts.get(fault_type, 0) + 1
             
-            print(f"\n各类型样本数量（含正常）：")
+            print(f"\n各故障类型样本数量：")
             for fault_type, count in fault_type_counts.items():
                 print(f"  {fault_type}: {count}")
 

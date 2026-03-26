@@ -108,3 +108,5 @@ apriori/apriori_results/*
 *.pkl
 dist/
 *.docx
+
+legacy/* !legacy/.gitkeep
